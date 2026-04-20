@@ -1,6 +1,6 @@
 {
   "name": "@us-all/unifi-mcp",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "UniFi MCP server - Cloud API for site management, device monitoring, and network overview",
   "type": "module",
   "main": "dist/index.js",

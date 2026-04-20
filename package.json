@@ -1,0 +1,54 @@
+{
+  "name": "@us-all/unifi-mcp",
+  "version": "1.0.0",
+  "description": "UniFi MCP server - Cloud API for site management, device monitoring, and network overview",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "unifi-mcp": "dist/index.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/us-all/unifi-mcp-server.git"
+  },
+  "homepage": "https://github.com/us-all/unifi-mcp-server#readme",
+  "bugs": "https://github.com/us-all/unifi-mcp-server/issues",
+  "keywords": [
+    "mcp",
+    "unifi",
+    "ubiquiti",
+    "network",
+    "monitoring",
+    "model-context-protocol"
+  ],
+  "author": "us-all",
+  "license": "MIT",
+  "packageManager": "pnpm@10.30.2",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "start": "node dist/index.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "presmoke": "pnpm run build",
+    "smoke": "node scripts/smoke-test.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.27.1",
+    "dotenv": "^17.3.1",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/node": "^25.3.1",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.1"
+  }
+}

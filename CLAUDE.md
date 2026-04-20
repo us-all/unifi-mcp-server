@@ -1,0 +1,134 @@
+# CLAUDE.md
+
+## Project Overview
+UniFi Cloud API MCP server — semantic analysis tools + Cloud Connector integration for network infrastructure monitoring.
+Read-only access via official UniFi Site Manager API and Cloud Connector proxy.
+
+## Tech Stack
+- **Runtime**: Node.js 18+ with TypeScript
+- **Package Manager**: pnpm
+- **MCP SDK**: `@modelcontextprotocol/sdk` (^1.27.1)
+- **Validation**: zod v4
+- **Config**: dotenv
+
+## Build & Run Commands
+```bash
+pnpm install
+pnpm run build
+pnpm run smoke     # Live API smoke test
+node dist/index.js # Start server
+```
+
+## Architecture
+```
+Claude → MCP (stdio) → index.ts
+                        ├── tools/analysis.ts   → Site Manager API (UNIFI_API_KEY)
+                        ├── tools/*.ts (raw)     → Site Manager API (UNIFI_API_KEY)
+                        └── tools/connector.ts   → Cloud Connector  (UNIFI_API_KEY_OWNER)
+                        helpers/resolver.ts      → hostName ↔ ID mapping
+```
+
+### Layers
+- **Analysis tools** (`tools/analysis.ts`): Semantic tools returning judgments (status/summary/issues)
+- **Connector tools** (`tools/connector.ts`): Cloud Connector proxy to local APIs (requires owner key)
+- **Raw tools** (`tools/hosts.ts`, `sites.ts`, etc.): Direct Site Manager API wrappers
+- **Helpers** (`helpers/resolver.ts`): hostName ↔ hostId/siteId resolution
+
+### Key Source Files
+- `src/index.ts` — Entry point, 12 base + 33 connector = 45 tools
+- `src/config.ts` — Dual key config + `isConnectorAvailable()`
+- `src/client.ts` — Site Manager API client (X-API-KEY, retry)
+- `src/connector-client.ts` — Cloud Connector client (owner key, retry, 30s timeout)
+- `src/retry.ts` — withRetry: exponential backoff + jitter (429, 5xx, AbortError, network)
+- `src/tools/utils.ts` — wrapToolHandler, error sanitization
+- `src/tools/analysis.ts` — 3 semantic analysis tools
+- `src/tools/connector.ts` — 33 Cloud Connector tools (siteGet/hostGet helpers)
+- `src/helpers/resolver.ts` — hostName → hostId/siteId + ConnectorContext
+
+### Key Routing
+- `client.ts` uses `UNIFI_API_KEY` — Site Manager API only
+- `connector-client.ts` uses `UNIFI_API_KEY_OWNER` — Cloud Connector only
+- Never mixed. Connector tools auto-disabled when owner key not set.
+
+### Tool Pattern
+Each tool file exports:
+1. Zod schema with `.describe()` on all fields
+2. Async handler function
+3. Schema is registered in index.ts with `wrapToolHandler(handler)`
+
+### Severity System
+- `healthy` — no issues
+- `info` — informational (no action needed)
+- `warning` — needs attention
+- `critical` — immediate action required
+- `unknown` — API failure or incomplete data
+
+### Anomaly Detection Thresholds
+- Device offline → `critical`
+- startupTime < 1h → `critical` (just rebooted)
+- startupTime < 24h → `warning` (recent reboot)
+- startupTime < 72h → `info` (monitor)
+- WAN uptime < 90% → `critical`
+- WAN uptime < 95% → `warning`
+
+## Environment Variables
+- `UNIFI_API_KEY` (required) — API key from unifi.ui.com (any admin)
+- `UNIFI_API_KEY_OWNER` (optional) — Owner account API key for Cloud Connector
+- `UNIFI_API_URL` (optional) — defaults to `https://api.ui.com/v1`
+
+## API Key Permission Levels
+
+API key permissions inherit from the user role of the account that created them.
+
+### Non-owner key (admin account)
+- **Site Manager API**: Full access (`/v1/hosts`, `/v1/sites`, `/v1/devices`, `/v1/sd-wan-configs`)
+- **Cloud Connector**: **403 Forbidden** (`insufficient permissions for this host`)
+- **ISP Metrics**: May return 404 (account/plan dependent)
+- **Scope**: Read-only aggregated data only
+
+### Owner key (console owner account)
+- **Site Manager API**: Full access (same as above)
+- **Cloud Connector**: **Full access** (`/v1/connector/consoles/{id}/*path`)
+  - Proxies to local controller at `http://127.0.0.1/proxy/[path]`
+  - Network integration API: `/network/integration/v1/sites`, devices, clients, networks
+  - Protect integration API: cameras, NVR, events
+- **Scope**: Read-only, but can access detailed per-device/per-client data
+
+### Key requirements for Cloud Connector
+- Console firmware >= 5.0.3
+- Non-owner keys: limited to key owner's consoles only
+- Owner keys: can access all consoles in the organization
+- API path format: `https://api.ui.com/v1/connector/consoles/{hostId}/{appPath}`
+- Local siteId (UUID) required, not "default" string
+
+### UniFi role hierarchy
+- Owner → Super Admin → Site Admin → Read Only
+- API key inherits permissions of the creating user's role
+
+### Permissions at key creation
+- **View Only**: Read-only access (currently the only option in GA)
+- **Full Access**: Greyed out in GA UI — may require Early Access program
+
+## Constraints
+- API key is **read-only** (Ubiquiti limitation — "Full Access" not yet available in GA)
+- Rate limit: 10,000 req/min (stable v1), 100 req/min (EA)
+- No write/mutation operations available
+- ISP metrics endpoint may return 404 (account-dependent)
+- Cloud Connector is a **partial** local API proxy — not all endpoints available
+  - Integration API paths work (`/network/integration/v1/*`)
+  - Legacy API paths return 404 (`/api/s/{site}/stat/event`)
+  - Event logs and syslog not accessible via connector
+
+## Retry & Resilience
+- Retry: max 3 attempts with exponential backoff (1s → 2s → 4s) + random jitter (0~300ms)
+- Retryable errors: 429 (rate limit), 5xx (server error), AbortError (timeout), network errors
+- Cloud Connector timeout: 30 seconds (AbortSignal.timeout)
+- Non-retryable errors (4xx except 429) fail immediately
+
+### 최근 변경사항 (2026-04-20)
+- v1.0.0 초기 릴리즈
+- Site Manager API 9개 엔드포인트 100% 커버
+- Network API read-only 37개 엔드포인트 → 33개 connector 도구로 구현
+- 시맨틱 분석 도구 3개 (site health, reboot detection, overview)
+- 이중 키 라우팅 (admin key / owner key)
+- retry with backoff + jitter, connector timeout 30s

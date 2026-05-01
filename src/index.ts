@@ -36,6 +36,7 @@ import * as C from "./tools/connector.js";
 
 import { registry, searchToolsSchema, searchTools, type Category } from "./tool-registry.js";
 import { registerResources } from "./resources.js";
+import { summarizeSiteSchema, summarizeSite } from "./tools/aggregations.js";
 
 validateConfig();
 
@@ -298,6 +299,13 @@ if (isConnectorAvailable()) {
 } else {
   console.error("[UniFi] Connector tools disabled (no UNIFI_API_KEY_OWNER)");
 }
+
+// === Aggregation tools (round-trip elimination) ===
+currentCategory = "analysis";
+
+tool("summarize-site",
+  "Deep aggregated site view: devices + WAN status + (opt) clients + networks + WiFi broadcasts in one call. Replaces 4-5 round-trips. Connector-dependent fields auto-skip when owner key absent.",
+  summarizeSiteSchema.shape, wrapToolHandler(summarizeSite));
 
 // === Meta tools (always enabled) ===
 currentCategory = "meta";

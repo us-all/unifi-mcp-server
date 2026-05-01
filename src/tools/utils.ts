@@ -1,5 +1,6 @@
 import { UniFiError } from "../client.js";
 import { ConnectorError, ConnectorUnavailableError } from "../connector-client.js";
+import { applyExtractFields } from "./extract-fields.js";
 
 const SENSITIVE_PATTERNS = [
   /X-API-KEY/i,
@@ -22,8 +23,10 @@ export function wrapToolHandler<T>(fn: (params: T) => Promise<unknown>) {
   return async (params: T) => {
     try {
       const result = await fn(params);
+      const expr = (params as Record<string, unknown> | undefined)?.extractFields;
+      const projected = typeof expr === "string" ? applyExtractFields(result, expr) : result;
       return {
-        content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }],
+        content: [{ type: "text" as const, text: JSON.stringify(projected, null, 2) }],
       };
     } catch (error) {
       const structured: Record<string, unknown> = {

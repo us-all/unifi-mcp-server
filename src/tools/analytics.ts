@@ -7,6 +7,9 @@ import {
   resolveConnectorContext,
 } from "../helpers/resolver.js";
 import { isConnectorAvailable } from "../config.js";
+import { extractFieldsDescription } from "./extract-fields.js";
+
+const ef = z.string().optional().describe(extractFieldsDescription);
 
 /**
  * Cross-site analytics tools.
@@ -25,6 +28,7 @@ interface SiteStatistics {
 
 export const compareSitesSchema = z.object({
   names: z.array(z.string()).optional().describe("Specific site host names to compare (omit for all)"),
+  extractFields: ef,
 });
 
 export async function compareSites(params: z.infer<typeof compareSitesSchema>) {

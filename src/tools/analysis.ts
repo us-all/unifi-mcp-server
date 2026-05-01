@@ -6,6 +6,9 @@ import {
   resolveAllDevices,
   type DeviceEntry,
 } from "../helpers/resolver.js";
+import { extractFieldsDescription } from "./extract-fields.js";
+
+const ef = z.string().optional().describe(extractFieldsDescription);
 
 // --- Types ---
 
@@ -143,7 +146,9 @@ function summarizeIssues(issues: Issue[]): string {
 
 // --- Tool: list-sites-overview ---
 
-export const listSitesOverviewSchema = z.object({});
+export const listSitesOverviewSchema = z.object({
+  extractFields: ef,
+});
 
 export async function listSitesOverview() {
   try {
@@ -242,6 +247,7 @@ export async function listSitesOverview() {
 
 export const analyzeSiteHealthSchema = z.object({
   name: z.string().describe("Site host name (e.g., 'USM', 'USV', 'USA', 'USS', 'USC')"),
+  extractFields: ef,
 });
 
 export async function analyzeSiteHealth(params: z.infer<typeof analyzeSiteHealthSchema>) {
@@ -329,6 +335,7 @@ interface RebootEntry {
 export const detectRecentRebootsSchema = z.object({
   name: z.string().optional().describe("Site host name to check (omit for all sites)"),
   hours: z.coerce.number().optional().default(24).describe("Look back period in hours (default: 24)"),
+  extractFields: ef,
 });
 
 export async function detectRecentReboots(params: z.infer<typeof detectRecentRebootsSchema>) {

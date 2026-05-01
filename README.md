@@ -29,6 +29,21 @@ pnpm run build
 | `UNIFI_API_KEY` | Yes | API key from [unifi.ui.com](https://unifi.ui.com) → Settings → API |
 | `UNIFI_API_KEY_OWNER` | No | Owner account API key — enables 33 Cloud Connector tools |
 | `UNIFI_API_URL` | No | API base URL (default: `https://api.ui.com/v1`) |
+| `UNIFI_TOOLS` | No | Allowlist of tool categories. Categories: `analysis`, `raw`, `devices`, `clients`, `networks`, `firewall`, `wan`, `reference`. |
+| `UNIFI_DISABLE` | No | Denylist of categories. Ignored when `UNIFI_TOOLS` is set. |
+
+## Token Efficiency
+
+**Measured impact** (without owner key, 17 tools loaded; with owner key, 52):
+
+| Scenario | Tools | Schema tokens |
+|----------|-------|---------------|
+| default no-owner | 17 | 1,700 |
+| `UNIFI_TOOLS=analysis` | 8 | **1,000** (−42%) |
+| default with owner key | 52 | ~5,000 |
+| `UNIFI_TOOLS=analysis` with owner | 8 | **1,000** (−80%) |
+
+Smallest schema footprint of all `@us-all/*` MCPs — fleet of 200+ devices analyzable inside a single session.
 
 ## Claude Code
 

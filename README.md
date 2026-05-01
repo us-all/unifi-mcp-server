@@ -1,6 +1,10 @@
 # UniFi MCP Server
 
+[![@us-all standard](https://img.shields.io/badge/built%20to-%40us--all%20MCP%20standard-blue)](https://github.com/us-all/datadog-mcp-server/blob/master/STANDARD.md)
+
 **UniFi semantic analysis library** — fleet-wide health, anomaly detection, and cross-site analytics on top of the UniFi Cloud API.
+
+> Authored to the [@us-all MCP Standard](https://github.com/us-all/datadog-mcp-server/blob/master/STANDARD.md) — token-efficient by design.
 
 If you need broad raw API coverage including Protect/Access and write operations, see [sirkirby/unifi-mcp](https://github.com/sirkirby/unifi-mcp) (234 tools). Use this server when you want **judgments, not just data** — site health verdicts, fleet outlier detection, firmware inventory diffs, WAN uptime aggregates, and top-bandwidth clients — with built-in severity classification and curated thresholds.
 

@@ -125,7 +125,16 @@ API key permissions inherit from the user role of the account that created them.
 - Cloud Connector timeout: 30 seconds (AbortSignal.timeout)
 - Non-retryable errors (4xx except 429) fail immediately
 
-### 최근 변경사항 (2026-04-20)
+### 최근 변경사항 (2026-05-01)
+- **v1.5.0**: `@us-all/mcp-toolkit ^0.1.0` 마이그레이션 — tool-registry/extract-fields toolkit 위임. 약 175 lines 절감.
+- **v1.4.0**: `summarize-site` 어그리게이션 도구 — devices + WAN + (opt) clients/networks/wifi 1 call로 통합.
+- **v1.3.0**: MCP Resources (`unifi://` URI) — site, devices, hosts.
+- **v1.2.2**: `pnpm token-stats` + CI TOKEN_BUDGET=6500.
+- **v1.2.1**: `extractFields` auto-apply via wrapToolHandler. analysis/analytics 스키마에 명시적 선언.
+- **v1.2.0**: 토큰 효율 표준 (UNIFI_TOOLS / UNIFI_DISABLE 8 카테고리 + search-tools 메타툴 + extractFields 헬퍼).
+- **v1.1.0**: 시맨틱 분석 라이브러리 포지셔닝. 분석 도구 4개 추가 (compare-sites, firmware-inventory, wan-uptime-trend, top-clients-by-bandwidth). 도구 47→51.
+
+### 이전 변경사항 (2026-04-20)
 - v1.0.0 초기 릴리즈
 - Site Manager API 9개 엔드포인트 100% 커버
 - Network API read-only 37개 엔드포인트 → 33개 connector 도구로 구현

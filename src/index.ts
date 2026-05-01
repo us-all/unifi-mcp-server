@@ -23,6 +23,14 @@ import {
   detectRecentRebootsSchema, detectRecentReboots,
 } from "./tools/analysis.js";
 
+// Analytics tools (cross-site aggregation)
+import {
+  compareSitesSchema, compareSites,
+  firmwareInventorySchema, firmwareInventory,
+  wanUptimeTrendSchema, wanUptimeTrend,
+  topClientsByBandwidthSchema, topClientsByBandwidth,
+} from "./tools/analytics.js";
+
 // Connector tools (requires owner key)
 import * as C from "./tools/connector.js";
 
@@ -46,6 +54,22 @@ server.tool("analyze-site-health",
 server.tool("detect-recent-reboots",
   "Detect devices that rebooted within a time window. Checks all sites by default",
   detectRecentRebootsSchema.shape, wrapToolHandler(detectRecentReboots));
+
+server.tool("compare-sites",
+  "Side-by-side comparison of all (or selected) sites: device count, online %, WAN avg/min uptime, gateway. Use to spot fleet outliers.",
+  compareSitesSchema.shape, wrapToolHandler(compareSites));
+
+server.tool("firmware-inventory",
+  "Group all devices by firmware version + model and surface outdated devices. Helps detect fleet inconsistency and pending upgrades.",
+  firmwareInventorySchema.shape, wrapToolHandler(firmwareInventory));
+
+server.tool("wan-uptime-trend",
+  "Aggregate WAN uptime across all sites with severity flagging (default threshold 95%). Returns per-WAN sorted by lowest uptime first.",
+  wanUptimeTrendSchema.shape, wrapToolHandler(wanUptimeTrend));
+
+server.tool("top-clients-by-bandwidth",
+  "Top N clients by bandwidth on a site (combined / tx-only / rx-only). Requires Cloud Connector (UNIFI_API_KEY_OWNER).",
+  topClientsByBandwidthSchema.shape, wrapToolHandler(topClientsByBandwidth));
 
 // === Raw API Tools (Site Manager) ===
 

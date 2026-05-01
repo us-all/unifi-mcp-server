@@ -1,11 +1,14 @@
 # UniFi MCP Server
 
-UniFi Cloud API MCP server for network infrastructure monitoring and analysis.
+**UniFi semantic analysis library** — fleet-wide health, anomaly detection, and cross-site analytics on top of the UniFi Cloud API.
+
+If you need broad raw API coverage including Protect/Access and write operations, see [sirkirby/unifi-mcp](https://github.com/sirkirby/unifi-mcp) (234 tools). Use this server when you want **judgments, not just data** — site health verdicts, fleet outlier detection, firmware inventory diffs, WAN uptime aggregates, and top-bandwidth clients — with built-in severity classification and curated thresholds.
 
 ## Features
 
-- **45 tools** (12 base + 33 connector) covering 100% of UniFi Network read-only API
-- **Semantic analysis** — site health checks, reboot detection, anomaly reporting
+- **51 tools** (7 semantic analysis + 9 raw Site Manager + 35 Cloud Connector)
+- **Semantic analysis** — site health, reboot detection, fleet comparison, firmware inventory, WAN uptime trend, top-bandwidth clients
+- **Severity classification** — `healthy` / `info` / `warning` / `critical` with curated thresholds (uptime, reboot recency, etc.)
 - **Cloud Connector** — access local device/client/network data via cloud proxy
 - **Dual API key routing** — separate keys for Site Manager API and Cloud Connector
 - **Read-only** — safe to use, no mutation operations

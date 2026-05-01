@@ -20,22 +20,9 @@ jobs:
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
           cache: pnpm
           registry-url: https://registry.npmjs.org
-      - name: Verify npm version (>=11.5.1 required for trusted publishing)
-        run: |
-          NPM_VERSION=$(npm --version)
-          echo "npm version: $NPM_VERSION"
-          MAJOR=$(echo "$NPM_VERSION" | cut -d. -f1)
-          MINOR=$(echo "$NPM_VERSION" | cut -d. -f2)
-          if [ "$MAJOR" -lt 11 ] || { [ "$MAJOR" -eq 11 ] && [ "$MINOR" -lt 5 ]; }; then
-            echo "Upgrading npm for trusted publishing support..."
-            npm install -g npm@11.5.1
-            echo "npm version after upgrade: $(npm --version)"
-          else
-            echo "npm $NPM_VERSION already meets requirement (>=11.5.1)"
-          fi
       - run: pnpm install --frozen-lockfile
       - run: pnpm run build
       - name: Preflight dry-run

@@ -1,6 +1,6 @@
 {
   "name": "@us-all/unifi-mcp",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "description": "UniFi semantic analysis MCP server — fleet health, anomaly detection, cross-site analytics on top of Cloud API",
   "type": "module",
   "main": "dist/index.js",
@@ -39,7 +39,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "presmoke": "pnpm run build",
-    "smoke": "node scripts/smoke-test.mjs"
+    "smoke": "node scripts/smoke-test.mjs",
+    "pretoken-stats": "pnpm run build",
+    "token-stats": "node scripts/measure-tokens.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.27.1",

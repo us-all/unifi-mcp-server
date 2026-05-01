@@ -34,6 +34,8 @@ import {
 // Connector tools (requires owner key)
 import * as C from "./tools/connector.js";
 
+import { registry, searchToolsSchema, searchTools, type Category } from "./tool-registry.js";
+
 validateConfig();
 
 const server = new McpServer({
@@ -41,71 +43,84 @@ const server = new McpServer({
   version: "1.0.0",
 });
 
-// === Analysis Tools (semantic) ===
+// --- Tool registration with category filtering (UNIFI_TOOLS / UNIFI_DISABLE) ---
+let currentCategory: Category = "analysis";
 
-server.tool("list-sites-overview",
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function tool(name: string, description: string, schema: any, handler: any): void {
+  registry.register(name, description, currentCategory);
+  if (registry.isEnabled(currentCategory)) {
+    server.tool(name, description, schema, handler);
+  }
+}
+
+// === Analysis Tools (semantic) ===
+currentCategory = "analysis";
+
+tool("list-sites-overview",
   "Get a health overview of all UniFi sites with status, issues, and device counts",
   listSitesOverviewSchema.shape, wrapToolHandler(listSitesOverview));
 
-server.tool("analyze-site-health",
+tool("analyze-site-health",
   "Analyze health of a specific site by name (e.g., 'USM'). Returns device status, WAN info, reboot detection",
   analyzeSiteHealthSchema.shape, wrapToolHandler(analyzeSiteHealth));
 
-server.tool("detect-recent-reboots",
+tool("detect-recent-reboots",
   "Detect devices that rebooted within a time window. Checks all sites by default",
   detectRecentRebootsSchema.shape, wrapToolHandler(detectRecentReboots));
 
-server.tool("compare-sites",
+tool("compare-sites",
   "Side-by-side comparison of all (or selected) sites: device count, online %, WAN avg/min uptime, gateway. Use to spot fleet outliers.",
   compareSitesSchema.shape, wrapToolHandler(compareSites));
 
-server.tool("firmware-inventory",
+tool("firmware-inventory",
   "Group all devices by firmware version + model and surface outdated devices. Helps detect fleet inconsistency and pending upgrades.",
   firmwareInventorySchema.shape, wrapToolHandler(firmwareInventory));
 
-server.tool("wan-uptime-trend",
+tool("wan-uptime-trend",
   "Aggregate WAN uptime across all sites with severity flagging (default threshold 95%). Returns per-WAN sorted by lowest uptime first.",
   wanUptimeTrendSchema.shape, wrapToolHandler(wanUptimeTrend));
 
-server.tool("top-clients-by-bandwidth",
+tool("top-clients-by-bandwidth",
   "Top N clients by bandwidth on a site (combined / tx-only / rx-only). Requires Cloud Connector (UNIFI_API_KEY_OWNER).",
   topClientsByBandwidthSchema.shape, wrapToolHandler(topClientsByBandwidth));
 
 // === Raw API Tools (Site Manager) ===
+currentCategory = "raw";
 
-server.tool("list-hosts",
+tool("list-hosts",
   "List all UniFi console hosts (UDM, UDM Pro, Cloud Key, etc.)",
   listHostsSchema.shape, wrapToolHandler(listHosts));
 
-server.tool("get-host",
+tool("get-host",
   "Get detailed information about a specific host by ID",
   getHostSchema.shape, wrapToolHandler(getHost));
 
-server.tool("list-sites",
+tool("list-sites",
   "List all sites with statistics (device counts, WAN status, ISP info)",
   listSitesSchema.shape, wrapToolHandler(listSites));
 
-server.tool("list-devices",
+tool("list-devices",
   "List all devices across hosts (switches, APs, gateways, cameras)",
   listDevicesSchema.shape, wrapToolHandler(listDevices));
 
-server.tool("get-isp-metrics",
+tool("get-isp-metrics",
   "Get ISP performance metrics. May be unavailable depending on account",
   getIspMetricsSchema.shape, wrapToolHandler(getIspMetrics));
 
-server.tool("query-isp-metrics",
+tool("query-isp-metrics",
   "Query ISP metrics with filters. May be unavailable depending on account",
   queryIspMetricsSchema.shape, wrapToolHandler(queryIspMetrics));
 
-server.tool("list-sdwan-configs",
+tool("list-sdwan-configs",
   "List all SD-WAN configurations",
   listSdwanConfigsSchema.shape, wrapToolHandler(listSdwanConfigs));
 
-server.tool("get-sdwan-config",
+tool("get-sdwan-config",
   "Get a specific SD-WAN configuration by ID",
   getSdwanConfigSchema.shape, wrapToolHandler(getSdwanConfig));
 
-server.tool("get-sdwan-config-status",
+tool("get-sdwan-config-status",
   "Get the status of a specific SD-WAN configuration",
   getSdwanConfigStatusSchema.shape, wrapToolHandler(getSdwanConfigStatus));
 
@@ -113,155 +128,168 @@ server.tool("get-sdwan-config-status",
 
 if (isConnectorAvailable()) {
   // App Info
-  server.tool("get-app-info",
+  currentCategory = "devices";
+  tool("get-app-info",
     "Get UniFi Network application info for a host",
     C.getAppInfoSchema.shape, wrapToolHandler(C.getAppInfo));
 
   // Sites (local)
-  server.tool("list-local-sites",
+  currentCategory = "raw";
+  tool("list-local-sites",
     "List local sites on a specific console",
     C.listLocalSitesSchema.shape, wrapToolHandler(C.listLocalSites));
 
   // Devices
-  server.tool("get-device-details",
+  currentCategory = "devices";
+  tool("get-device-details",
     "List all devices with details (firmware, features) for a site",
     C.getDeviceDetailsSchema.shape, wrapToolHandler(C.getDeviceDetails));
 
-  server.tool("get-device-by-id",
+  tool("get-device-by-id",
     "Get detailed info for a specific device by ID",
     C.getDeviceByIdSchema.shape, wrapToolHandler(C.getDeviceById));
 
-  server.tool("get-device-statistics",
+  tool("get-device-statistics",
     "Get latest statistics for a specific device",
     C.getDeviceStatisticsSchema.shape, wrapToolHandler(C.getDeviceStatistics));
 
-  server.tool("list-pending-devices",
+  tool("list-pending-devices",
     "List devices pending adoption on a host",
     C.listPendingDevicesSchema.shape, wrapToolHandler(C.listPendingDevices));
 
   // Clients
-  server.tool("list-site-clients",
+  currentCategory = "clients";
+  tool("list-site-clients",
     "List connected clients for a site (default limit: 50)",
     C.listSiteClientsSchema.shape, wrapToolHandler(C.listSiteClients));
 
-  server.tool("get-client-details",
+  tool("get-client-details",
     "Get detailed info for a specific client by ID",
     C.getClientDetailsSchema.shape, wrapToolHandler(C.getClientDetails));
 
   // Networks
-  server.tool("list-networks",
+  currentCategory = "networks";
+  tool("list-networks",
     "List network configurations (VLANs, subnets) for a site",
     C.listNetworksSchema.shape, wrapToolHandler(C.listNetworks));
 
-  server.tool("get-network-details",
+  tool("get-network-details",
     "Get detailed info for a specific network by ID",
     C.getNetworkDetailsSchema.shape, wrapToolHandler(C.getNetworkDetails));
 
-  server.tool("get-network-references",
+  tool("get-network-references",
     "Get references for a specific network (what uses this network)",
     C.getNetworkReferencesSchema.shape, wrapToolHandler(C.getNetworkReferences));
 
   // WiFi
-  server.tool("list-wifi-broadcasts",
+  currentCategory = "networks";
+  tool("list-wifi-broadcasts",
     "List WiFi broadcast configurations (SSIDs) for a site",
     C.listWifiBroadcastsSchema.shape, wrapToolHandler(C.listWifiBroadcasts));
 
-  server.tool("get-wifi-broadcast-details",
+  tool("get-wifi-broadcast-details",
     "Get detailed info for a specific WiFi broadcast",
     C.getWifiBroadcastDetailsSchema.shape, wrapToolHandler(C.getWifiBroadcastDetails));
 
   // Hotspot
-  server.tool("list-vouchers",
+  currentCategory = "networks";
+  tool("list-vouchers",
     "List hotspot vouchers for a site",
     C.listVouchersSchema.shape, wrapToolHandler(C.listVouchers));
 
-  server.tool("get-voucher-details",
+  tool("get-voucher-details",
     "Get details for a specific voucher",
     C.getVoucherDetailsSchema.shape, wrapToolHandler(C.getVoucherDetails));
 
   // Firewall
-  server.tool("list-firewall-zones",
+  currentCategory = "firewall";
+  tool("list-firewall-zones",
     "List firewall zones for a site",
     C.listFirewallZonesSchema.shape, wrapToolHandler(C.listFirewallZones));
 
-  server.tool("get-firewall-zone",
+  tool("get-firewall-zone",
     "Get details for a specific firewall zone",
     C.getFirewallZoneSchema.shape, wrapToolHandler(C.getFirewallZone));
 
-  server.tool("list-firewall-policies",
+  tool("list-firewall-policies",
     "List firewall policies for a site",
     C.listFirewallPoliciesSchema.shape, wrapToolHandler(C.listFirewallPolicies));
 
-  server.tool("get-firewall-policy",
+  tool("get-firewall-policy",
     "Get details for a specific firewall policy",
     C.getFirewallPolicySchema.shape, wrapToolHandler(C.getFirewallPolicy));
 
-  server.tool("get-firewall-policy-ordering",
+  tool("get-firewall-policy-ordering",
     "Get the ordering of user-defined firewall policies",
     C.getFirewallPolicyOrderingSchema.shape, wrapToolHandler(C.getFirewallPolicyOrdering));
 
   // ACL
-  server.tool("list-acl-rules",
+  currentCategory = "firewall";
+  tool("list-acl-rules",
     "List access control (ACL) rules for a site",
     C.listAclRulesSchema.shape, wrapToolHandler(C.listAclRules));
 
-  server.tool("get-acl-rule",
+  tool("get-acl-rule",
     "Get details for a specific ACL rule",
     C.getAclRuleSchema.shape, wrapToolHandler(C.getAclRule));
 
-  server.tool("get-acl-rule-ordering",
+  tool("get-acl-rule-ordering",
     "Get the ordering of user-defined ACL rules",
     C.getAclRuleOrderingSchema.shape, wrapToolHandler(C.getAclRuleOrdering));
 
   // DNS
-  server.tool("list-dns-policies",
+  currentCategory = "firewall";
+  tool("list-dns-policies",
     "List DNS policies for a site",
     C.listDnsPoliciesSchema.shape, wrapToolHandler(C.listDnsPolicies));
 
-  server.tool("get-dns-policy",
+  tool("get-dns-policy",
     "Get details for a specific DNS policy",
     C.getDnsPolicySchema.shape, wrapToolHandler(C.getDnsPolicy));
 
   // Traffic Matching
-  server.tool("list-traffic-matching-lists",
+  currentCategory = "firewall";
+  tool("list-traffic-matching-lists",
     "List traffic matching lists for a site",
     C.listTrafficMatchingListsSchema.shape, wrapToolHandler(C.listTrafficMatchingLists));
 
-  server.tool("get-traffic-matching-list",
+  tool("get-traffic-matching-list",
     "Get details for a specific traffic matching list",
     C.getTrafficMatchingListSchema.shape, wrapToolHandler(C.getTrafficMatchingList));
 
-  // Supporting Resources
-  server.tool("list-wans",
+  // Supporting Resources (WAN/VPN/RADIUS)
+  currentCategory = "wan";
+  tool("list-wans",
     "List WAN interfaces for a site",
     C.listWansSchema.shape, wrapToolHandler(C.listWans));
 
-  server.tool("list-vpn-tunnels",
+  tool("list-vpn-tunnels",
     "List site-to-site VPN tunnels",
     C.listVpnTunnelsSchema.shape, wrapToolHandler(C.listVpnTunnels));
 
-  server.tool("list-vpn-servers",
+  tool("list-vpn-servers",
     "List VPN servers for a site",
     C.listVpnServersSchema.shape, wrapToolHandler(C.listVpnServers));
 
-  server.tool("list-radius-profiles",
+  tool("list-radius-profiles",
     "List RADIUS profiles for a site",
     C.listRadiusProfilesSchema.shape, wrapToolHandler(C.listRadiusProfiles));
 
-  server.tool("list-device-tags",
+  currentCategory = "reference";
+  tool("list-device-tags",
     "List device tags for a site",
     C.listDeviceTagsSchema.shape, wrapToolHandler(C.listDeviceTags));
 
   // DPI & Reference
-  server.tool("list-dpi-categories",
+  tool("list-dpi-categories",
     "List DPI application categories",
     C.listDpiCategoriesSchema.shape, wrapToolHandler(C.listDpiCategories));
 
-  server.tool("list-dpi-applications",
+  tool("list-dpi-applications",
     "List DPI applications",
     C.listDpiApplicationsSchema.shape, wrapToolHandler(C.listDpiApplications));
 
-  server.tool("list-countries",
+  tool("list-countries",
     "List countries (reference data)",
     C.listCountriesSchema.shape, wrapToolHandler(C.listCountries));
 
@@ -269,6 +297,13 @@ if (isConnectorAvailable()) {
 } else {
   console.error("[UniFi] Connector tools disabled (no UNIFI_API_KEY_OWNER)");
 }
+
+// === Meta tools (always enabled) ===
+currentCategory = "meta";
+
+tool("search-tools",
+  "Discover available tools by natural language query. Returns matching tool names + descriptions across all categories. Use this first to navigate the 51+ tool surface efficiently.",
+  searchToolsSchema.shape, wrapToolHandler(searchTools));
 
 async function main() {
   const transport = new StdioServerTransport();

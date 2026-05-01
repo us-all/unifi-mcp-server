@@ -35,6 +35,7 @@ import {
 import * as C from "./tools/connector.js";
 
 import { registry, searchToolsSchema, searchTools, type Category } from "./tool-registry.js";
+import { registerResources } from "./resources.js";
 
 validateConfig();
 
@@ -304,6 +305,9 @@ currentCategory = "meta";
 tool("search-tools",
   "Discover available tools by natural language query. Returns matching tool names + descriptions across all categories. Use this first to navigate the 51+ tool surface efficiently.",
   searchToolsSchema.shape, wrapToolHandler(searchTools));
+
+// === MCP Resources (unifi:// URI scheme) ===
+registerResources(server);
 
 async function main() {
   const transport = new StdioServerTransport();

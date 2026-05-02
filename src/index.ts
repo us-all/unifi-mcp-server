@@ -37,7 +37,10 @@ import * as C from "./tools/connector.js";
 import { registry, searchToolsSchema, searchTools, type Category } from "./tool-registry.js";
 import { registerResources } from "./resources.js";
 import { registerPrompts } from "./prompts.js";
-import { summarizeSiteSchema, summarizeSite } from "./tools/aggregations.js";
+import {
+  summarizeSiteSchema, summarizeSite,
+  siteHealthTimelineSchema, siteHealthTimeline,
+} from "./tools/aggregations.js";
 
 validateConfig();
 
@@ -307,6 +310,10 @@ currentCategory = "analysis";
 tool("summarize-site",
   "Deep aggregated site view: devices + WAN status + (opt) clients + networks + WiFi broadcasts in one call. Replaces 4-5 round-trips. Connector-dependent fields auto-skip when owner key absent.",
   summarizeSiteSchema.shape, wrapToolHandler(summarizeSite));
+
+tool("site-health-timeline",
+  "Per-site health snapshot over a lookback window: devices with stability scores, reboots, WAN uptime, optional client count. Replaces 5+ sequential calls (devices + wan + reboots + clients). Caveats[] surfaces partial-data and API limitations.",
+  siteHealthTimelineSchema.shape, wrapToolHandler(siteHealthTimeline));
 
 // === Meta tools (always enabled) ===
 currentCategory = "meta";

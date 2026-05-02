@@ -7,6 +7,28 @@ import { extractFieldsDescription } from "./extract-fields.js";
 
 const ef = z.string().optional().describe(extractFieldsDescription);
 
+type StabilityScore = "stable" | "intermittent" | "unstable";
+type WanStatus = "healthy" | "warning" | "critical";
+
+function hoursAgo(isoTime: string | null | undefined): number | null {
+  if (!isoTime) return null;
+  const diff = Date.now() - new Date(isoTime).getTime();
+  return diff / (1000 * 60 * 60);
+}
+
+function classifyReboots(count: number): StabilityScore {
+  if (count < 1) return "stable";
+  if (count <= 3) return "intermittent";
+  return "unstable";
+}
+
+function classifyWan(uptimePct: number | null): WanStatus {
+  if (uptimePct === null) return "healthy";
+  if (uptimePct < 90) return "critical";
+  if (uptimePct < 95) return "warning";
+  return "healthy";
+}
+
 /**
  * `summarize-site` — deep aggregated site view.
  * Goes beyond `analyze-site-health` by adding (when owner key available)
@@ -82,5 +104,173 @@ export async function summarizeSite(params: z.infer<typeof summarizeSiteSchema>)
       connectorAvailable: !!connectorCtx,
       clientsIncluded: !!(clientsR.status === "fulfilled" && clientsR.value),
     },
+  };
+}
+
+/**
+ * `site-health-timeline` — per-site health snapshot over a window.
+ * Replaces 5+ sequential calls (devices → wan → reboots → optional clients).
+ *
+ * Strategy:
+ *  - Resolve devices via hostName once.
+ *  - Run all secondary fetches with Promise.allSettled so one failure
+ *    does not poison the whole response (caveats[] surfaces partial-data).
+ *  - WAN uptime sourced from `/sites.statistics.wans` — the same surface
+ *    `wan-uptime-trend` uses. This is current/lifetime state, NOT a
+ *    true time-bounded series; lookback is reflected in reboot detection.
+ *  - Optional connector data (clients) only when isConnectorAvailable().
+ */
+
+export const siteHealthTimelineSchema = z.object({
+  hostName: z.string().describe("Site host name (e.g. 'USM')"),
+  lookbackDays: z.coerce.number().int().min(1).max(90).optional().default(7)
+    .describe("Window for reboot detection in days (1-90, default 7)"),
+  extractFields: ef,
+});
+
+interface DeviceTimelineEntry {
+  id: string;
+  name: string;
+  model: string;
+  status: string;
+  startupTime: string | null;
+  rebootsInWindow: number;
+  stabilityScore: StabilityScore;
+}
+
+interface RebootSummary {
+  deviceId: string;
+  deviceName: string;
+  severity: "critical" | "warning" | "info";
+  hoursAgo: number;
+}
+
+export async function siteHealthTimeline(params: z.infer<typeof siteHealthTimelineSchema>) {
+  const lookbackDays = params.lookbackDays ?? 7;
+  const lookbackHours = lookbackDays * 24;
+  const now = new Date();
+  const start = new Date(now.getTime() - lookbackHours * 60 * 60 * 1000);
+  const period = {
+    start: start.toISOString(),
+    end: now.toISOString(),
+    lookbackDays,
+  };
+
+  const caveats: string[] = [];
+
+  const hostEntry = await resolveDevicesByHostName(params.hostName);
+  if (!hostEntry) {
+    return {
+      hostName: params.hostName,
+      hostId: null,
+      period,
+      devices: [] as DeviceTimelineEntry[],
+      reboots: [] as RebootSummary[],
+      wan: { uptimePct: null, samples: 0, status: "healthy" as WanStatus },
+      clients: { connector: "unavailable" as const, count: null },
+      caveats: [`site '${params.hostName}' not found`],
+    };
+  }
+
+  const connectorAvailable = isConnectorAvailable();
+
+  const [sitesR, connectorCtxR] = await Promise.allSettled([
+    unifiClient.get<{ data: Array<{ hostId: string; statistics: { wans?: Record<string, { wanUptime?: number; externalIp?: string }> } }> }>("/sites"),
+    connectorAvailable ? resolveConnectorContext(params.hostName) : Promise.resolve(null),
+  ]);
+
+  // --- WAN aggregation (current / lifetime state from /sites) ---
+  let wanUptimePct: number | null = null;
+  let wanSamples = 0;
+  if (sitesR.status === "fulfilled") {
+    const siteData = sitesR.value.data.find((s) => s.hostId === hostEntry.hostId);
+    const wans = siteData?.statistics.wans ?? {};
+    const uptimes = Object.values(wans)
+      .map((w) => w.wanUptime)
+      .filter((u): u is number => typeof u === "number");
+    wanSamples = uptimes.length;
+    if (uptimes.length > 0) {
+      wanUptimePct = Math.round((uptimes.reduce((a, b) => a + b, 0) / uptimes.length) * 10) / 10;
+    }
+  } else {
+    caveats.push(`failed to fetch /sites for WAN: ${sitesR.reason instanceof Error ? sitesR.reason.message : String(sitesR.reason)}`);
+  }
+  caveats.push("wan.uptimePct is sourced from /sites.statistics (current/lifetime state); the lookback window applies only to reboot detection");
+
+  // --- Devices + reboot detection (reuses logic from detect-recent-reboots) ---
+  const deviceEntries: DeviceTimelineEntry[] = [];
+  const rebootList: RebootSummary[] = [];
+
+  for (const d of hostEntry.devices) {
+    const hours = hoursAgo(d.startupTime);
+    const rebootedInWindow = hours !== null && hours < lookbackHours;
+    // The Site Manager API exposes only the last startupTime, so reboots
+    // within the window can only ever be 0 or 1 per device. Surface this
+    // limitation in caveats below rather than fabricating a higher count.
+    const rebootsInWindow = rebootedInWindow ? 1 : 0;
+
+    deviceEntries.push({
+      id: d.id,
+      name: d.name,
+      model: d.model,
+      status: d.status,
+      startupTime: d.startupTime,
+      rebootsInWindow,
+      stabilityScore: classifyReboots(rebootsInWindow),
+    });
+
+    if (rebootedInWindow && hours !== null) {
+      let severity: RebootSummary["severity"] = "info";
+      if (hours < 1) severity = "critical";
+      else if (hours < 24) severity = "warning";
+      rebootList.push({
+        deviceId: d.id,
+        deviceName: d.name,
+        severity,
+        hoursAgo: Math.round(hours * 10) / 10,
+      });
+    }
+  }
+  rebootList.sort((a, b) => a.hoursAgo - b.hoursAgo);
+  caveats.push("rebootsInWindow is at most 1 per device — Site Manager API exposes only the most recent startupTime, not full reboot history");
+
+  // --- Optional connector clients ---
+  let clientsBlock: { connector: "available" | "unavailable"; count: number | null };
+  if (!connectorAvailable) {
+    clientsBlock = { connector: "unavailable", count: null };
+    caveats.push("UNIFI_API_KEY_OWNER not set — client count omitted");
+  } else if (connectorCtxR.status !== "fulfilled" || !connectorCtxR.value) {
+    clientsBlock = { connector: "unavailable", count: null };
+    caveats.push(`connector context unavailable for '${params.hostName}'`);
+  } else {
+    const ctx = connectorCtxR.value;
+    const clientsResp = await connectorClient.get<{ data: unknown[] }>(
+      ctx.hostId,
+      `network/integration/v1/sites/${ctx.localSiteId}/clients`,
+      { limit: 1000 },
+    ).catch((err: unknown) => {
+      caveats.push(`connector clients fetch failed: ${err instanceof Error ? err.message : String(err)}`);
+      return null;
+    });
+    if (clientsResp && Array.isArray(clientsResp.data)) {
+      clientsBlock = { connector: "available", count: clientsResp.data.length };
+    } else {
+      clientsBlock = { connector: "available", count: null };
+    }
+  }
+
+  return {
+    hostName: hostEntry.hostName,
+    hostId: hostEntry.hostId,
+    period,
+    devices: deviceEntries,
+    reboots: rebootList,
+    wan: {
+      uptimePct: wanUptimePct,
+      samples: wanSamples,
+      status: classifyWan(wanUptimePct),
+    },
+    clients: clientsBlock,
+    caveats,
   };
 }

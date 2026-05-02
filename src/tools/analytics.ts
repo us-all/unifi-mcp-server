@@ -248,12 +248,15 @@ export async function topClientsByBandwidth(params: z.infer<typeof topClientsByB
       const rx = c.uplink?.rxRate ?? c.rxRate ?? 0;
       const combined = tx + rx;
       const value = params.metric === "tx" ? tx : params.metric === "rx" ? rx : combined;
+      const typeStr = typeof c.type === "string" ? c.type : "";
       return {
         name: c.name ?? c.hostname ?? c.macAddress ?? c.id ?? "unknown",
         ip: c.ipAddress ?? "",
         mac: c.macAddress ?? "",
-        type: c.type ?? "",
-        isWired: c.isWired ?? false,
+        type: typeStr,
+        // Derive isWired from `type` when boolean field is absent — UniFi
+        // connector clients usually expose only the type discriminator.
+        isWired: typeof c.isWired === "boolean" ? c.isWired : typeStr.toUpperCase() === "WIRED",
         txBps: tx,
         rxBps: rx,
         combinedBps: combined,

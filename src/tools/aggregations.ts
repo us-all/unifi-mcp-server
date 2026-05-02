@@ -101,7 +101,12 @@ export async function summarizeSite(params: z.infer<typeof summarizeSiteSchema>)
       gateway: siteData?.statistics.gateway?.shortname ?? "unknown",
       deviceOnlinePct: devices.length === 0 ? 0 : Math.round((onlineDevices / devices.length) * 1000) / 10,
       minWanUptime,
-      connectorAvailable: !!connectorCtx,
+      // connectorAvailable reflects the owner-key capability, independent of
+      // whether this call requested any connector-backed includeX flag.
+      connectorAvailable: isConnectorAvailable(),
+      // connectorResolved reports whether we actually fetched a connector
+      // context for this call (false when no includeX flag was set).
+      connectorResolved: !!connectorCtx,
       clientsIncluded: !!(clientsR.status === "fulfilled" && clientsR.value),
     },
   };

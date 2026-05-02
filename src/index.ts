@@ -36,6 +36,7 @@ import * as C from "./tools/connector.js";
 
 import { registry, searchToolsSchema, searchTools, type Category } from "./tool-registry.js";
 import { registerResources } from "./resources.js";
+import { registerPrompts } from "./prompts.js";
 import { summarizeSiteSchema, summarizeSite } from "./tools/aggregations.js";
 
 validateConfig();
@@ -316,6 +317,9 @@ tool("search-tools",
 
 // === MCP Resources (unifi:// URI scheme) ===
 registerResources(server);
+
+// === MCP Prompts (workflow templates) ===
+registerPrompts(server);
 
 async function main() {
   const transport = new StdioServerTransport();

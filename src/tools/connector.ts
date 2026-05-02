@@ -1,6 +1,10 @@
 import { z } from "zod/v4";
+import { applyExtractFields } from "@us-all/mcp-toolkit";
 import { connectorClient } from "../connector-client.js";
 import { resolveConnectorContext, resolveHostByName } from "../helpers/resolver.js";
+import { extractFieldsDescription } from "./extract-fields.js";
+
+const ef = z.string().optional().describe(extractFieldsDescription);
 
 // --- Helper: site-scoped GET ---
 
@@ -82,9 +86,15 @@ export async function listPendingDevices(params: z.infer<typeof listPendingDevic
 export const listSiteClientsSchema = z.object({
   name: z.string().describe("Site host name (e.g., 'USM')"),
   limit: z.coerce.number().optional().default(50).describe("Max clients to return (default: 50)"),
+  extractFields: ef,
 });
 export async function listSiteClients(params: z.infer<typeof listSiteClientsSchema>) {
-  return siteGet(params.name, "clients", { limit: params.limit });
+  const result = await siteGet(params.name, "clients", { limit: params.limit });
+  if (params.extractFields || (result as { error?: string }).error) return result;
+  return applyExtractFields(
+    result,
+    "site,data.*.id,data.*.macAddress,data.*.name,data.*.ipAddress,data.*.connectedAt,data.*.type",
+  );
 }
 
 export const getClientDetailsSchema = z.object({

@@ -1,6 +1,6 @@
 {
   "name": "@us-all/unifi-mcp",
-  "version": "1.5.1",
+  "version": "1.5.2",
   "description": "UniFi semantic analysis MCP server — fleet health, anomaly detection, cross-site analytics on top of Cloud API",
   "type": "module",
   "main": "dist/index.js",
@@ -44,10 +44,10 @@
     "token-stats": "node scripts/measure-tokens.mjs"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.27.1",
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "@us-all/mcp-toolkit": "^0.2.0",
-    "dotenv": "^17.3.1",
-    "zod": "^4.3.6"
+    "dotenv": "^17.4.2",
+    "zod": "^4.4.2"
   },
   "devDependencies": {
     "@types/node": "^25.3.1",

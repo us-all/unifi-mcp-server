@@ -125,8 +125,9 @@ API key permissions inherit from the user role of the account that created them.
 - Cloud Connector timeout: 30 seconds (AbortSignal.timeout)
 - Non-retryable errors (4xx except 429) fail immediately
 
-### 최근 변경사항 (2026-05-01)
-- **v1.5.0**: `@us-all/mcp-toolkit ^0.1.0` 마이그레이션 — tool-registry/extract-fields toolkit 위임. 약 175 lines 절감.
+### 최근 변경사항
+- **v1.5.1** (2026-05-02): `@us-all/mcp-toolkit ^0.2.0` 채택 — 로컬 `sanitize` / `wrapToolHandler` 본문 제거, `createWrapToolHandler` factory로 위임. `redactionPatterns: [/X-API-KEY/i]` + `errorExtractors`(ConnectorUnavailableError → raw passthrough, ConnectorError·UniFiError → structured)만 명시. utils.ts 59→37 lines.
+- **v1.5.0** (2026-05-01): `@us-all/mcp-toolkit ^0.1.0` 마이그레이션 — tool-registry/extract-fields toolkit 위임. 약 175 lines 절감.
 - **v1.4.0**: `summarize-site` 어그리게이션 도구 — devices + WAN + (opt) clients/networks/wifi 1 call로 통합.
 - **v1.3.0**: MCP Resources (`unifi://` URI) — site, devices, hosts.
 - **v1.2.2**: `pnpm token-stats` + CI TOKEN_BUDGET=6500.

@@ -1,14 +1,24 @@
 import { McpServer, ResourceTemplate } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { unifiClient } from "./client.js";
-import { resolveDevicesByHostName } from "./helpers/resolver.js";
+import { resolveDevicesByHostName, resolveAllDevices } from "./helpers/resolver.js";
 
 /**
  * MCP Resources for hot UniFi entities.
  * URI scheme: `unifi://`
- *   - unifi://site/{name}            — site overview by host name (e.g. 'USM')
- *   - unifi://devices                — all devices across all sites
- *   - unifi://hosts                  — all UniFi consoles
+ *   - unifi://site/{name}                   — site overview by host name (e.g. 'USM')
+ *   - unifi://site/{hostName}/devices       — devices for a specific site by host name
+ *   - unifi://devices                       — all devices across all sites
+ *   - unifi://hosts                         — all UniFi consoles
+ *   - unifi://reboots/recent                — recent reboot events (24h) across all sites
  */
+
+function hoursAgo(isoTime: string | null): number | null {
+  if (!isoTime) return null;
+  const diff = Date.now() - new Date(isoTime).getTime();
+  return diff / (1000 * 60 * 60);
+}
+
+type Severity = "healthy" | "info" | "warning" | "critical" | "unknown";
 
 function asJson(uri: string, data: unknown) {
   return {
@@ -37,6 +47,30 @@ export function registerResources(server: McpServer): void {
   );
 
   server.registerResource(
+    "site-devices",
+    new ResourceTemplate("unifi://site/{hostName}/devices", { list: undefined }),
+    {
+      title: "UniFi Site Devices",
+      description: "Devices for a specific site by host name (e.g. 'USM') — compact device list",
+      mimeType: "application/json",
+    },
+    async (uri, vars) => {
+      const hostName = decodeURIComponent(String(vars.hostName));
+      const entry = await resolveDevicesByHostName(hostName);
+      if (!entry) {
+        return asJson(uri.toString(), { error: `site '${hostName}' not found` });
+      }
+      return asJson(uri.toString(), {
+        hostName: entry.hostName,
+        hostId: entry.hostId,
+        updatedAt: entry.updatedAt,
+        count: entry.devices.length,
+        devices: entry.devices,
+      });
+    },
+  );
+
+  server.registerResource(
     "devices",
     "unifi://devices",
     {
@@ -47,6 +81,66 @@ export function registerResources(server: McpServer): void {
     async (uri) => {
       const data = await unifiClient.get("/devices");
       return asJson(uri.toString(), data);
+    },
+  );
+
+  server.registerResource(
+    "reboots-recent",
+    "unifi://reboots/recent",
+    {
+      title: "UniFi Recent Reboots",
+      description: "Recent reboot events (last 24h) across all reachable sites",
+      mimeType: "application/json",
+    },
+    async (uri) => {
+      const lookbackHours = 24;
+      try {
+        const allDevices = await resolveAllDevices();
+        const reboots: Array<{
+          site: string;
+          device: string;
+          model: string;
+          severity: Severity;
+          startupTime: string;
+          hoursAgo: number;
+        }> = [];
+
+        for (const host of allDevices) {
+          for (const device of host.devices) {
+            const hours = hoursAgo(device.startupTime);
+            if (hours !== null && hours < lookbackHours) {
+              let severity: Severity = "info";
+              if (hours < 1) severity = "critical";
+              else if (hours < 24) severity = "warning";
+
+              reboots.push({
+                site: host.hostName,
+                device: device.name,
+                model: device.model,
+                severity,
+                startupTime: device.startupTime!,
+                hoursAgo: Math.round(hours * 10) / 10,
+              });
+            }
+          }
+        }
+
+        reboots.sort((a, b) => a.hoursAgo - b.hoursAgo);
+
+        return asJson(uri.toString(), {
+          checkedAt: new Date().toISOString(),
+          threshold: `${lookbackHours}h`,
+          count: reboots.length,
+          reboots,
+        });
+      } catch (error) {
+        return asJson(uri.toString(), {
+          checkedAt: new Date().toISOString(),
+          threshold: `${lookbackHours}h`,
+          error: error instanceof Error ? error.message : String(error),
+          reboots: [],
+        });
+      }
     },
   );
 

@@ -80,7 +80,23 @@ export async function summarizeSite(params: z.infer<typeof summarizeSiteSchema>)
       ])
     : [{ status: "fulfilled" as const, value: null }, { status: "fulfilled" as const, value: null }, { status: "fulfilled" as const, value: null }];
 
-  const devices = hostEntry.devices;
+  // Slim each device to drop noise fields (uidb icon blob, adoptionTime,
+  // isManaged, note) that bloat the response without aiding LLM analysis.
+  // Callers needing full device payload should use list-devices directly.
+  const devices = hostEntry.devices.map((d) => ({
+    id: d.id,
+    mac: d.mac,
+    name: d.name,
+    model: d.model,
+    shortname: d.shortname,
+    ip: d.ip,
+    productLine: d.productLine,
+    status: d.status,
+    version: d.version,
+    firmwareStatus: d.firmwareStatus,
+    isConsole: d.isConsole,
+    startupTime: d.startupTime,
+  }));
   const onlineDevices = devices.filter((d) => d.status === "online").length;
   const wans = siteData?.statistics.wans ?? {};
   const minWanUptime = Object.values(wans).reduce<number | null>((acc, w) => {

@@ -1,9 +1,15 @@
 #!/usr/bin/env node
 
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { validateConfig, isConnectorAvailable } from "./config.js";
 import { wrapToolHandler } from "./tools/utils.js";
+
+const pkgPath = join(dirname(fileURLToPath(import.meta.url)), "..", "package.json");
+const { version: pkgVersion } = JSON.parse(readFileSync(pkgPath, "utf-8")) as { version: string };
 
 // Raw API tools
 import { listHostsSchema, listHosts, getHostSchema, getHost } from "./tools/hosts.js";
@@ -46,7 +52,7 @@ validateConfig();
 
 const server = new McpServer({
   name: "unifi",
-  version: "1.0.0",
+  version: pkgVersion,
 });
 
 // --- Tool registration with category filtering (UNIFI_TOOLS / UNIFI_DISABLE) ---

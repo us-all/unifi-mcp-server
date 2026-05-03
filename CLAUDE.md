@@ -126,6 +126,7 @@ API key permissions inherit from the user role of the account that created them.
 - Non-retryable errors (4xx except 429) fail immediately
 
 ### 최근 변경사항
+- **v1.8.5** (2026-05-03): `serverInfo.version`이 `"1.0.0"`에 박혀있던 것을 `package.json`에서 런타임 로드. initialize handshake에서 보고하는 server version이 실제 패키지 버전과 일치.
 - **v1.8.4** (2026-05-03): `@us-all/mcp-toolkit ^1.1.0` 채택 + `aggregate()` 헬퍼로 두 어그리게이션 도구(`summarize-site`, `site-health-timeline`) 마이그레이션. `summarize-site`는 이전엔 caveats 노출 없었음 — 추가됨.
 - **v1.8.3** (2026-05-03): `@us-all/mcp-toolkit ^1.0.0` 핀 업데이트. toolkit API freeze (semver 1.x 보장 시작) — 코드 변경 0줄, 3/3 테스트 통과.
 - **v1.8.2** (2026-05-03): `summarize-site`가 device 객체에서 uidb 노이즈 드롭 (default-slim).

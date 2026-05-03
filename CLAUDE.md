@@ -126,6 +126,12 @@ API key permissions inherit from the user role of the account that created them.
 - Non-retryable errors (4xx except 429) fail immediately
 
 ### 최근 변경사항
+- **v1.8.2** (2026-05-03): `summarize-site`가 device 객체에서 uidb 노이즈 드롭 (default-slim).
+- **v1.8.1** (2026-05-03): 수동 검증 발견 버그 2개 패치 — `top-clients-by-bandwidth`가 `type:"WIRED"`와 `isWired:false`를 동시에 반환하던 문제 (UniFi connector API는 type discriminator만 노출 → boolean 미존재 시 `type.toUpperCase()==="WIRED"`에서 파생). `summarize-site`의 `connectorAvailable`을 capability(owner-key 보유)와 `connectorResolved`(this-call resolved)로 분리.
+- **v1.8.0** (2026-05-02): `site-health-timeline` 어그리게이션 — devices + WAN + reboots + clients 1 call. Site Manager API 한계(WAN window-bound 불가, reboots/device max 1)는 caveats에 명시.
+- **v1.7.0** (2026-05-02): Wave 3 Resources — `unifi://site/{hostName}/devices`, `unifi://reboots/recent`.
+- **v1.6.0** (2026-05-02): MCP Prompts 4개 — `triage-site-degradation`, `firmware-rollout-audit`, `wan-uptime-report`, `cross-site-anomaly-detection`.
+- **v1.5.2** (2026-05-02): Wave 1 — 의존성 bumps + default projections (describe trim 0건, 이미 lean).
 - **v1.5.1** (2026-05-02): `@us-all/mcp-toolkit ^0.2.0` 채택 — 로컬 `sanitize` / `wrapToolHandler` 본문 제거, `createWrapToolHandler` factory로 위임. `redactionPatterns: [/X-API-KEY/i]` + `errorExtractors`(ConnectorUnavailableError → raw passthrough, ConnectorError·UniFiError → structured)만 명시. utils.ts 59→37 lines.
 - **v1.5.0** (2026-05-01): `@us-all/mcp-toolkit ^0.1.0` 마이그레이션 — tool-registry/extract-fields toolkit 위임. 약 175 lines 절감.
 - **v1.4.0**: `summarize-site` 어그리게이션 도구 — devices + WAN + (opt) clients/networks/wifi 1 call로 통합.

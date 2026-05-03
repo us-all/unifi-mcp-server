@@ -1,4 +1,5 @@
 import { z } from "zod/v4";
+import { aggregate } from "@us-all/mcp-toolkit";
 import { unifiClient } from "../client.js";
 import { connectorClient } from "../connector-client.js";
 import { resolveDevicesByHostName, resolveConnectorContext } from "../helpers/resolver.js";
@@ -66,19 +67,23 @@ export async function summarizeSite(params: z.infer<typeof summarizeSiteSchema>)
     connectorCtx = await resolveConnectorContext(name).catch(() => null);
   }
 
-  const [clientsR, networksR, wifiR] = connectorCtx
-    ? await Promise.allSettled([
-        params.includeClients
-          ? connectorClient.get(connectorCtx.hostId, `network/integration/v1/sites/${connectorCtx.localSiteId}/clients`, { limit: params.clientLimit })
-          : Promise.resolve(null),
-        params.includeNetworks
-          ? connectorClient.get(connectorCtx.hostId, `network/integration/v1/sites/${connectorCtx.localSiteId}/networks`)
-          : Promise.resolve(null),
-        params.includeWifi
-          ? connectorClient.get(connectorCtx.hostId, `network/integration/v1/sites/${connectorCtx.localSiteId}/wifi-broadcasts`)
-          : Promise.resolve(null),
-      ])
-    : [{ status: "fulfilled" as const, value: null }, { status: "fulfilled" as const, value: null }, { status: "fulfilled" as const, value: null }];
+  const caveats: string[] = [];
+
+  const ctx = connectorCtx;
+  const { clients, networks, wifi } = await aggregate(
+    {
+      clients: ctx && params.includeClients
+        ? () => connectorClient.get(ctx.hostId, `network/integration/v1/sites/${ctx.localSiteId}/clients`, { limit: params.clientLimit })
+        : () => Promise.resolve(null),
+      networks: ctx && params.includeNetworks
+        ? () => connectorClient.get(ctx.hostId, `network/integration/v1/sites/${ctx.localSiteId}/networks`)
+        : () => Promise.resolve(null),
+      wifi: ctx && params.includeWifi
+        ? () => connectorClient.get(ctx.hostId, `network/integration/v1/sites/${ctx.localSiteId}/wifi-broadcasts`)
+        : () => Promise.resolve(null),
+    },
+    caveats,
+  );
 
   // Slim each device to drop noise fields (uidb icon blob, adoptionTime,
   // isManaged, note) that bloat the response without aiding LLM analysis.
@@ -110,9 +115,9 @@ export async function summarizeSite(params: z.infer<typeof summarizeSiteSchema>)
     hostId: hostEntry.hostId,
     devices: { total: devices.length, online: onlineDevices, offline: devices.length - onlineDevices, list: devices },
     wan: wans,
-    clients: clientsR.status === "fulfilled" ? clientsR.value : null,
-    networks: networksR.status === "fulfilled" ? networksR.value : null,
-    wifiBroadcasts: wifiR.status === "fulfilled" ? wifiR.value : null,
+    clients,
+    networks,
+    wifiBroadcasts: wifi,
     summary: {
       gateway: siteData?.statistics.gateway?.shortname ?? "unknown",
       deviceOnlinePct: devices.length === 0 ? 0 : Math.round((onlineDevices / devices.length) * 1000) / 10,
@@ -123,8 +128,9 @@ export async function summarizeSite(params: z.infer<typeof summarizeSiteSchema>)
       // connectorResolved reports whether we actually fetched a connector
       // context for this call (false when no includeX flag was set).
       connectorResolved: !!connectorCtx,
-      clientsIncluded: !!(clientsR.status === "fulfilled" && clientsR.value),
+      clientsIncluded: !!clients,
     },
+    caveats,
   };
 }
 
@@ -195,16 +201,20 @@ export async function siteHealthTimeline(params: z.infer<typeof siteHealthTimeli
 
   const connectorAvailable = isConnectorAvailable();
 
-  const [sitesR, connectorCtxR] = await Promise.allSettled([
-    unifiClient.get<{ data: Array<{ hostId: string; statistics: { wans?: Record<string, { wanUptime?: number; externalIp?: string }> } }> }>("/sites"),
-    connectorAvailable ? resolveConnectorContext(params.hostName) : Promise.resolve(null),
-  ]);
+  const { sites, connectorContext } = await aggregate(
+    {
+      sites: () =>
+        unifiClient.get<{ data: Array<{ hostId: string; statistics: { wans?: Record<string, { wanUptime?: number; externalIp?: string }> } }> }>("/sites"),
+      connectorContext: connectorAvailable ? () => resolveConnectorContext(params.hostName) : () => Promise.resolve(null),
+    },
+    caveats,
+  );
 
   // --- WAN aggregation (current / lifetime state from /sites) ---
   let wanUptimePct: number | null = null;
   let wanSamples = 0;
-  if (sitesR.status === "fulfilled") {
-    const siteData = sitesR.value.data.find((s) => s.hostId === hostEntry.hostId);
+  if (sites) {
+    const siteData = sites.data.find((s) => s.hostId === hostEntry.hostId);
     const wans = siteData?.statistics.wans ?? {};
     const uptimes = Object.values(wans)
       .map((w) => w.wanUptime)
@@ -213,8 +223,6 @@ export async function siteHealthTimeline(params: z.infer<typeof siteHealthTimeli
     if (uptimes.length > 0) {
       wanUptimePct = Math.round((uptimes.reduce((a, b) => a + b, 0) / uptimes.length) * 10) / 10;
     }
-  } else {
-    caveats.push(`failed to fetch /sites for WAN: ${sitesR.reason instanceof Error ? sitesR.reason.message : String(sitesR.reason)}`);
   }
   caveats.push("wan.uptimePct is sourced from /sites.statistics (current/lifetime state); the lookback window applies only to reboot detection");
 
@@ -260,11 +268,11 @@ export async function siteHealthTimeline(params: z.infer<typeof siteHealthTimeli
   if (!connectorAvailable) {
     clientsBlock = { connector: "unavailable", count: null };
     caveats.push("UNIFI_API_KEY_OWNER not set — client count omitted");
-  } else if (connectorCtxR.status !== "fulfilled" || !connectorCtxR.value) {
+  } else if (!connectorContext) {
     clientsBlock = { connector: "unavailable", count: null };
     caveats.push(`connector context unavailable for '${params.hostName}'`);
   } else {
-    const ctx = connectorCtxR.value;
+    const ctx = connectorContext;
     const clientsResp = await connectorClient.get<{ data: unknown[] }>(
       ctx.hostId,
       `network/integration/v1/sites/${ctx.localSiteId}/clients`,

@@ -126,6 +126,7 @@ API key permissions inherit from the user role of the account that created them.
 - Non-retryable errors (4xx except 429) fail immediately
 
 ### 최근 변경사항
+- **v1.8.4** (2026-05-03): `@us-all/mcp-toolkit ^1.1.0` 채택 + `aggregate()` 헬퍼로 두 어그리게이션 도구(`summarize-site`, `site-health-timeline`) 마이그레이션. `summarize-site`는 이전엔 caveats 노출 없었음 — 추가됨.
 - **v1.8.3** (2026-05-03): `@us-all/mcp-toolkit ^1.0.0` 핀 업데이트. toolkit API freeze (semver 1.x 보장 시작) — 코드 변경 0줄, 3/3 테스트 통과.
 - **v1.8.2** (2026-05-03): `summarize-site`가 device 객체에서 uidb 노이즈 드롭 (default-slim).
 - **v1.8.1** (2026-05-03): 수동 검증 발견 버그 2개 패치 — `top-clients-by-bandwidth`가 `type:"WIRED"`와 `isWired:false`를 동시에 반환하던 문제 (UniFi connector API는 type discriminator만 노출 → boolean 미존재 시 `type.toUpperCase()==="WIRED"`에서 파생). `summarize-site`의 `connectorAvailable`을 capability(owner-key 보유)와 `connectorResolved`(this-call resolved)로 분리.

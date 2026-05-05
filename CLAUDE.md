@@ -126,6 +126,8 @@ API key permissions inherit from the user role of the account that created them.
 - Non-retryable errors (4xx except 429) fail immediately
 
 ### 최근 변경사항
+- **v1.9.0** (2026-05-05): `startMcpServer` 채택 — toolkit v1.2.0의 런타임 헬퍼로 stdio 부트스트랩을 1줄로 교체. `MCP_TRANSPORT=http`로 Streamable HTTP transport 옵트인 가능 (기본 stdio). Bearer 인증, `/health` 엔드포인트. 기존 stdio 사용자 영향 0.
+- **v1.8.6** (2026-05-05): `@us-all/mcp-toolkit ^1.2.0` 핀 업데이트 — 자동 cascade. 코드 변경 0줄.
 - **v1.8.5** (2026-05-03): `serverInfo.version`이 `"1.0.0"`에 박혀있던 것을 `package.json`에서 런타임 로드. initialize handshake에서 보고하는 server version이 실제 패키지 버전과 일치.
 - **v1.8.4** (2026-05-03): `@us-all/mcp-toolkit ^1.1.0` 채택 + `aggregate()` 헬퍼로 두 어그리게이션 도구(`summarize-site`, `site-health-timeline`) 마이그레이션. `summarize-site`는 이전엔 caveats 노출 없었음 — 추가됨.
 - **v1.8.3** (2026-05-03): `@us-all/mcp-toolkit ^1.0.0` 핀 업데이트. toolkit API freeze (semver 1.x 보장 시작) — 코드 변경 0줄, 3/3 테스트 통과.

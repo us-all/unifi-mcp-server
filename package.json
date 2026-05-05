@@ -1,6 +1,6 @@
 {
   "name": "@us-all/unifi-mcp",
-  "version": "1.8.6",
+  "version": "1.9.0",
   "description": "UniFi semantic analysis MCP server — fleet health, anomaly detection, cross-site analytics on top of Cloud API",
   "type": "module",
   "main": "dist/index.js",

@@ -17,6 +17,8 @@
 - **Aggregation tools** — fold 3–7 sequential calls into 1 with `caveats` array surfacing partial failures (e.g. Site Manager API can't window-bound WAN uptime — that's surfaced explicitly).
 - **MCP Prompts** (4) — `triage-site-degradation`, `firmware-rollout-audit`, `wan-uptime-report`, `cross-site-anomaly-detection`.
 - **Token-efficient by design** — smallest schema footprint of all `@us-all/*` MCPs (default ~5K tokens with owner key). Fleet of 200+ devices analyzable inside a single session.
+- **Apps SDK card** — `summarize-site` renders as a fleet-status card on ChatGPT clients (online %, WAN uptime, gateway, devices) via `_meta["openai/outputTemplate"]`. Claude clients receive the same JSON content.
+- **stdio + Streamable HTTP** — defaults to stdio. Set `MCP_TRANSPORT=http` for ChatGPT Apps SDK or remote clients (Bearer auth via `MCP_HTTP_TOKEN`).
 
 ## Try this — 5 prompts
 
@@ -117,8 +119,15 @@ Get the key: [unifi.ui.com](https://unifi.ui.com) → Settings → API → Gener
 | `UNIFI_API_URL` | ❌ | `https://api.ui.com/v1` | API base URL |
 | `UNIFI_TOOLS` | ❌ | — | Comma-sep allowlist of categories. |
 | `UNIFI_DISABLE` | ❌ | — | Comma-sep denylist. Ignored when `UNIFI_TOOLS` is set. |
+| `MCP_TRANSPORT` | ❌ | `stdio` | `http` to enable Streamable HTTP transport |
+| `MCP_HTTP_TOKEN` | conditional | — | Bearer token. Required when `MCP_TRANSPORT=http` |
+| `MCP_HTTP_PORT` | ❌ | `3000` | HTTP listen port |
+| `MCP_HTTP_HOST` | ❌ | `127.0.0.1` | HTTP bind host (DNS rebinding protection auto-enabled for localhost) |
+| `MCP_HTTP_SKIP_AUTH` | ❌ | `false` | Skip Bearer auth — e.g. behind a reverse proxy that handles it |
 
 **Categories** (8): `analysis`, `raw`, `devices`, `clients`, `networks`, `firewall`, `wan`, `reference`.
+
+When `MCP_TRANSPORT=http`: `POST /mcp` (Bearer-auth JSON-RPC) + `GET /health` (public liveness).
 
 ### Token efficiency
 

@@ -313,9 +313,28 @@ if (isConnectorAvailable()) {
 // === Aggregation tools (round-trip elimination) ===
 currentCategory = "analysis";
 
+// Card-aware wrapper: see datadog `slo-compliance-snapshot` for the same pattern.
+const SUMMARIZE_SITE_CARD_URI = "ui://widget/summarize-site.html";
+const wrappedSummarizeSite = wrapToolHandler(summarizeSite);
+async function summarizeSiteWithCard(args: Parameters<typeof wrappedSummarizeSite>[0]) {
+  const result = await wrappedSummarizeSite(args);
+  if (result.isError) return result;
+  try {
+    const structured = JSON.parse(result.content[0].text);
+    return {
+      ...result,
+      structuredContent: structured,
+      _meta: {
+        "openai/outputTemplate": SUMMARIZE_SITE_CARD_URI,
+        "ui.resourceUri": SUMMARIZE_SITE_CARD_URI,
+      },
+    };
+  } catch { return result; }
+}
+
 tool("summarize-site",
-  "Deep aggregated site view: devices + WAN status + (opt) clients + networks + WiFi broadcasts in one call. Replaces 4-5 round-trips. Connector-dependent fields auto-skip when owner key absent.",
-  summarizeSiteSchema.shape, wrapToolHandler(summarizeSite));
+  "Deep aggregated site view: devices + WAN status + (opt) clients + networks + WiFi broadcasts in one call. Replaces 4-5 round-trips. Connector-dependent fields auto-skip when owner key absent. Renders an Apps SDK card on ChatGPT clients (Claude clients receive the same JSON text).",
+  summarizeSiteSchema.shape, summarizeSiteWithCard);
 
 tool("site-health-timeline",
   "Per-site health snapshot over a lookback window: devices with stability scores, reboots, WAN uptime, optional client count. Replaces 5+ sequential calls (devices + wan + reboots + clients). Caveats[] surfaces partial-data and API limitations.",

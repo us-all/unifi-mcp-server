@@ -1,6 +1,6 @@
 {
   "name": "@us-all/unifi-mcp",
-  "version": "1.9.0",
+  "version": "1.10.0",
   "description": "UniFi semantic analysis MCP server — fleet health, anomaly detection, cross-site analytics on top of Cloud API",
   "type": "module",
   "main": "dist/index.js",
@@ -33,7 +33,7 @@
   "license": "MIT",
   "packageManager": "pnpm@10.30.2",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && node -e \"require('fs').cpSync('src/ui','dist/ui',{recursive:true})\"",
     "dev": "tsc --watch",
     "start": "node dist/index.js",
     "test": "vitest run",

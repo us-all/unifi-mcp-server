@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Site Summary</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #fff; --fg: #1f2328; --muted: #57606a; --border: #d0d7de;
+    --ok: #1a7f37; --warn: #bf8700; --err: #cf222e;
+    --pill-ok: #dafbe1; --pill-warn: #fff8c5; --pill-err: #ffebe9; --pill-unk: #eaeef2;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #0d1117; --fg: #c9d1d9; --muted: #8b949e; --border: #30363d;
+      --ok: #3fb950; --warn: #d29922; --err: #f85149;
+      --pill-ok: #033a16; --pill-warn: #3a2700; --pill-err: #3a0d12; --pill-unk: #21262d; }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body { font: 13px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    color: var(--fg); background: var(--bg); padding: 16px; }
+  h1 { font-size: 15px; margin: 0 0 4px; }
+  .meta { color: var(--muted); font-size: 12px; margin-bottom: 12px; }
+  .row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+  .stat { display: flex; flex-direction: column; min-width: 110px; }
+  .stat .label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+  .stat .value { font-size: 18px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  section { border: 1px solid var(--border); border-radius: 6px; padding: 10px 12px; margin-top: 10px; }
+  section h2 { font-size: 12px; margin: 0 0 8px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
+  ul { padding: 0; margin: 0; }
+  li { list-style: none; padding: 4px 0; border-bottom: 1px solid var(--border); display: flex; gap: 8px; align-items: baseline; font-size: 12px; }
+  li:last-child { border-bottom: none; }
+  .pill { display: inline-block; padding: 1px 6px; border-radius: 8px; font-size: 10px; text-transform: uppercase; }
+  .pill.online { background: var(--pill-ok); color: var(--ok); }
+  .pill.offline { background: var(--pill-err); color: var(--err); }
+  .pill.unknown { background: var(--pill-unk); color: var(--muted); }
+  .mono { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 11px; }
+  .empty { color: var(--muted); font-size: 12px; font-style: italic; }
+  .bar { height: 6px; background: var(--pill-unk); border-radius: 3px; overflow: hidden; margin-top: 6px; min-width: 80px; }
+  .bar > span { display: block; height: 100%; background: var(--ok); }
+  .bar.warn > span { background: var(--warn); } .bar.err > span { background: var(--err); }
+</style>
+</head>
+<body>
+<div id="app">Loading…</div>
+<script>
+(function(){
+  function escape(s){ return String(s ?? '').replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c])); }
+  function pct(v){ return v == null ? '—' : (Math.round(v*10)/10).toFixed(1) + '%'; }
+  function fmtUp(v){ if (v == null) return '—'; return (v*100).toFixed(2) + '%'; }
+  function statePill(s){ const k = s === 'online' ? 'online' : s === 'offline' ? 'offline' : 'unknown'; return `<span class="pill ${k}">${escape(s || 'unknown')}</span>`; }
+
+  function render(d) {
+    if (!d || d.error) {
+      return `<h1>Site ${escape(d?.site || '')}</h1><p class="empty">${escape(d?.error || 'No data.')}</p>`;
+    }
+    const s = d.summary || {};
+    const dev = d.devices || {};
+    const list = Array.isArray(dev.list) ? dev.list : [];
+    const wans = d.wan || {};
+    const caveats = Array.isArray(d.caveats) ? d.caveats : [];
+
+    const onlinePct = s.deviceOnlinePct;
+    const onlineClass = onlinePct >= 95 ? '' : onlinePct >= 80 ? 'warn' : 'err';
+
+    const wanRows = Object.entries(wans).map(([k, w]) => `<li>
+      <span class="mono">${escape(k)}</span>
+      <span style="flex:1">${escape(w.externalIp || '')}</span>
+      <span class="mono">${fmtUp(w.wanUptime)}</span>
+    </li>`).join('') || '<li class="empty">No WAN data.</li>';
+
+    const devRows = list.length === 0 ? '<li class="empty">No devices.</li>' :
+      list.slice(0, 20).map(dv => `<li>
+        <span class="mono">${escape(dv.shortname || dv.model || '')}</span>
+        <span style="flex:1">${escape(dv.name || '')}</span>
+        <span class="mono">${escape(dv.ip || '')}</span>
+        ${statePill(dv.status)}
+      </li>`).join('');
+    const moreDev = list.length > 20 ? `<li class="empty">… and ${list.length - 20} more</li>` : '';
+
+    const cavBlock = caveats.length === 0 ? '' :
+      `<section><h2>Caveats</h2><ul>${caveats.map(c => `<li>${escape(c)}</li>`).join('')}</ul></section>`;
+
+    return `
+      <h1>${escape(d.site)}</h1>
+      <div class="meta mono">${escape(s.gateway || '')} · ${escape(d.hostId || '')}</div>
+      <div class="row">
+        <div class="stat">
+          <span class="label">Devices online</span>
+          <span class="value">${dev.online || 0} / ${dev.total || 0}</span>
+          <div class="bar ${onlineClass}"><span style="width:${onlinePct || 0}%"></span></div>
+        </div>
+        <div class="stat">
+          <span class="label">Min WAN uptime</span>
+          <span class="value">${fmtUp(s.minWanUptime)}</span>
+        </div>
+        <div class="stat">
+          <span class="label">Connector</span>
+          <span class="value">${s.connectorResolved ? 'on' : s.connectorAvailable ? 'available' : 'off'}</span>
+        </div>
+      </div>
+      <section><h2>WAN</h2><ul>${wanRows}</ul></section>
+      <section><h2>Devices (${list.length})</h2><ul>${devRows}${moreDev}</ul></section>
+      ${cavBlock}
+    `;
+  }
+  function update(){ document.getElementById('app').innerHTML = render(window.openai && window.openai.toolOutput); }
+  update();
+  window.addEventListener('openai:set_globals', update);
+})();
+</script>
+</body>
+</html>

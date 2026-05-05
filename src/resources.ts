@@ -1,6 +1,12 @@
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
 import { McpServer, ResourceTemplate } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { unifiClient } from "./client.js";
 import { resolveDevicesByHostName, resolveAllDevices } from "./helpers/resolver.js";
+
+const UI_DIR = join(dirname(fileURLToPath(import.meta.url)), "ui");
+const SUMMARIZE_SITE_HTML = readFileSync(join(UI_DIR, "summarize-site.html"), "utf-8");
 
 /**
  * MCP Resources for hot UniFi entities.
@@ -156,5 +162,29 @@ export function registerResources(server: McpServer): void {
       const data = await unifiClient.get("/hosts");
       return asJson(uri.toString(), data);
     },
+  );
+
+  // --- Apps SDK UI templates (ui:// scheme) ---
+  // Rendered by ChatGPT / Apps SDK clients via _meta["openai/outputTemplate"].
+  // Claude clients ignore the metadata and use the tool's text content instead.
+  server.registerResource(
+    "summarize-site-card",
+    "ui://widget/summarize-site.html",
+    {
+      title: "Site Summary card",
+      description: "Apps SDK UI template rendered with summarize-site tool output",
+      mimeType: "text/html+skybridge",
+      _meta: {
+        "openai/outputTemplate": "ui://widget/summarize-site.html",
+        "ui.resourceUri": "ui://widget/summarize-site.html",
+      },
+    },
+    async (uri) => ({
+      contents: [{
+        uri: uri.toString(),
+        mimeType: "text/html+skybridge",
+        text: SUMMARIZE_SITE_HTML,
+      }],
+    }),
   );
 }

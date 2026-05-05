@@ -6,7 +6,7 @@
 
 [![npm](https://img.shields.io/npm/v/@us-all/unifi-mcp)](https://www.npmjs.com/package/@us-all/unifi-mcp)
 [![downloads](https://img.shields.io/npm/dm/@us-all/unifi-mcp)](https://www.npmjs.com/package/@us-all/unifi-mcp)
-[![tools](https://img.shields.io/badge/tools-51-blue)](#tools)
+[![tools](https://img.shields.io/badge/tools-54-blue)](#tools)
 [![@us-all standard](https://img.shields.io/badge/built%20to-%40us--all%20MCP%20standard-blue)](https://github.com/us-all/mcp-toolkit/blob/main/STANDARD.md)
 
 ## What it does that others don't
@@ -174,15 +174,17 @@ Workflow templates available via MCP `prompts/list`:
 - `unifi://site/{hostName}/devices` — site's devices snapshot
 - `unifi://reboots/recent` — recently rebooted devices fleet-wide
 
-## Tools (51)
+## Tools (54)
 
-8 categories. Use `search-tools` to discover at runtime; full list collapsed below.
+8 categories. Use `search-tools` to discover at runtime; full list collapsed below. Cloud Connector tools (33) only register when `UNIFI_API_KEY_OWNER` is set; without it the surface is 21 tools.
 
 | Group | Tools |
 |-------|------:|
 | Semantic analysis (incl. aggregations) | 9 |
 | Site Manager raw | 9 |
 | Cloud Connector (devices/clients/networks/wifi/firewall/wan/reference) | 33 |
+| Sites local (`list-local-sites`, `get-app-info`) | 2 |
+| Meta (`search-tools`) | 1 |
 
 <details>
 <summary>Full tool list</summary>

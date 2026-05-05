@@ -126,6 +126,8 @@ API key permissions inherit from the user role of the account that created them.
 - Non-retryable errors (4xx except 429) fail immediately
 
 ### 최근 변경사항
+- **v1.11.0** (2026-05-05): MSP-style 워크플로우 Prompt 4개 추가 (`msp-onboard-site-checklist`, `msp-monthly-client-report`, `msp-fleet-firmware-plan`, `msp-bandwidth-complaint-investigation`). 기존 4 fleet-ops prompts 옆에 MSP-specific 4개 추가 (총 8). 모두 read-only. onboard-checklist는 firmware/console/uptime/connector/firewall/reboots/pending 7개 readiness check; monthly-client-report는 non-technical 고객 친화 형식; fleet-firmware-plan은 N-wave staggered rollout(pilot→canary→general) + 롤백 트리거 + 윈도우; bandwidth-complaint은 WAN trend + ISP metrics + top clients + DPI 카테고리 정황 통합 진단. README "What it does" / 비교표 / Prompts 섹션 모두 업데이트.
+- **v1.10.1** (2026-05-05): `@us-all/mcp-toolkit ^1.2.1` 핀 업데이트 — 자동 cascade. 코드 변경 0줄.
 - **v1.10.0** (2026-05-05): Apps SDK UI 카드 — `summarize-site` 도구 결과를 `_meta["openai/outputTemplate"]` 통해 ChatGPT/Apps SDK 클라이언트에서 카드로 렌더 (디바이스 online %, WAN uptime, 게이트웨이, connector 상태). 새 리소스 `ui://widget/summarize-site.html` (`text/html+skybridge`). Claude 클라이언트는 `_meta` 무시 — non-breaking. 빌드 시 `src/ui/*.html`을 `dist/ui/`로 자동 복사.
 - **v1.9.0** (2026-05-05): `startMcpServer` 채택 — toolkit v1.2.0의 런타임 헬퍼로 stdio 부트스트랩을 1줄로 교체. `MCP_TRANSPORT=http`로 Streamable HTTP transport 옵트인 가능 (기본 stdio). Bearer 인증, `/health` 엔드포인트. 기존 stdio 사용자 영향 0.
 - **v1.8.6** (2026-05-05): `@us-all/mcp-toolkit ^1.2.0` 핀 업데이트 — 자동 cascade. 코드 변경 0줄.

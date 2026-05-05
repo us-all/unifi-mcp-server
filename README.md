@@ -2,7 +2,7 @@
 
 > **The MSP-style UniFi MCP — built around the official Site Manager API + Cloud Connector with cross-site analytics no other UniFi MCP exposes.**
 >
-> 51 tools split across 7 semantic-analysis aggregations, 9 raw Site Manager, and 35 Cloud Connector. Severity verdicts (`healthy`/`info`/`warning`/`critical`) on top of curated thresholds. 4 MCP Prompts for fleet-wide ops. Read-only — Ubiquiti's API keys don't ship write yet.
+> 54 tools split across 7 semantic-analysis aggregations, 9 raw Site Manager, and 35 Cloud Connector. Severity verdicts (`healthy`/`info`/`warning`/`critical`) on top of curated thresholds. 8 MCP Prompts (4 fleet-wide ops + 4 MSP workflows). Read-only — Ubiquiti's API keys don't ship write yet.
 
 [![npm](https://img.shields.io/npm/v/@us-all/unifi-mcp)](https://www.npmjs.com/package/@us-all/unifi-mcp)
 [![downloads](https://img.shields.io/npm/dm/@us-all/unifi-mcp)](https://www.npmjs.com/package/@us-all/unifi-mcp)
@@ -15,7 +15,7 @@
 - **Severity verdicts**, not just numbers — every analysis tool returns `healthy / info / warning / critical / unknown` with a curated reason. Curated thresholds (e.g. WAN uptime <90% = `critical`, startupTime <1h = `critical` post-reboot).
 - **Cloud Connector first-class** — 35 tools through the official `/v1/connector/consoles/{id}/...` proxy. `connectorAvailable` (capability) vs `connectorResolved` (this-call) split.
 - **Aggregation tools** — fold 3–7 sequential calls into 1 with `caveats` array surfacing partial failures (e.g. Site Manager API can't window-bound WAN uptime — that's surfaced explicitly).
-- **MCP Prompts** (4) — `triage-site-degradation`, `firmware-rollout-audit`, `wan-uptime-report`, `cross-site-anomaly-detection`.
+- **MCP Prompts** (8) — fleet ops: `triage-site-degradation`, `firmware-rollout-audit`, `wan-uptime-report`, `cross-site-anomaly-detection`. MSP workflows: `msp-onboard-site-checklist`, `msp-monthly-client-report`, `msp-fleet-firmware-plan`, `msp-bandwidth-complaint-investigation`.
 - **Token-efficient by design** — smallest schema footprint of all `@us-all/*` MCPs (default ~5K tokens with owner key). Fleet of 200+ devices analyzable inside a single session.
 - **Apps SDK card** — `summarize-site` renders as a fleet-status card on ChatGPT clients (online %, WAN uptime, gateway, devices) via `_meta["openai/outputTemplate"]`. Claude clients receive the same JSON content.
 - **stdio + Streamable HTTP** — defaults to stdio. Set `MCP_TRANSPORT=http` for ChatGPT Apps SDK or remote clients (Bearer auth via `MCP_HTTP_TOKEN`).
@@ -43,7 +43,7 @@ Connect the server to Claude Desktop or Claude Code, then paste any of these:
 | UniFi Access (doors) | ✅ | ❌ | ❌ (out of scope) |
 | Aggregation tools | ❌ | ❌ | ✅ 7 |
 | Severity verdicts | ❌ | ❌ | ✅ curated thresholds |
-| MCP Prompts | ❌ | ❌ | ✅ 4 |
+| MCP Prompts | ❌ | ❌ | ✅ 8 (incl. 4 MSP workflows) |
 
 Use **sirkirby** when you need cameras (Protect) or door access. Use **enuno** if you want raw Network API breadth. Use **this server** for MSP-style multi-site analytics, fleet triage, and any "is something off?" question across many consoles.
 
@@ -160,14 +160,21 @@ Curated thresholds:
 | WAN uptime < 90% | `critical` |
 | WAN uptime < 95% | `warning` |
 
-## MCP Prompts (4)
+## MCP Prompts (8)
 
-Workflow templates available via MCP `prompts/list`:
+Workflow templates available via MCP `prompts/list`. Four are fleet-ops; four are MSP-specific (managed-service-provider workflows).
 
+**Fleet ops:**
 - `triage-site-degradation` — site complaints workflow: device + WAN + reboots + clients in sequence.
 - `firmware-rollout-audit` — fleet-wide firmware diff and rollout safety check.
 - `wan-uptime-report` — monthly WAN SLA-style report across sites.
 - `cross-site-anomaly-detection` — compare a site to fleet baseline; flag outliers.
+
+**MSP workflows:**
+- `msp-onboard-site-checklist` — pass/fail readiness checklist for a newly added customer site (firmware floor, console connectivity, uptime trend, connector availability, firewall sanity, recent reboots, pending devices).
+- `msp-monthly-client-report` — customer-facing monthly health report (one site → headline, network availability, devices, top users, recommendations) with non-technical phrasing.
+- `msp-fleet-firmware-plan` — staggered N-wave rollout plan to a target firmware version, ordered by risk-tolerance with maintenance windows + rollback triggers.
+- `msp-bandwidth-complaint-investigation` — triage 'internet is slow at site X' via WAN trend + ISP metrics + top clients + DPI categories + recent reboots.
 
 ## MCP Resources
 

@@ -1,0 +1,45 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.us-all/unifi",
+  "description": "UniFi semantic analysis MCP server — fleet health, anomaly detection, cross-site analytics on top of Cloud API",
+  "repository": {
+    "url": "https://github.com/us-all/unifi-mcp-server",
+    "source": "github"
+  },
+  "version": "1.11.1",
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "@us-all/unifi-mcp",
+      "version": "1.11.1",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "UNIFI_API_KEY",
+          "description": "UniFi Site Manager API key (https://unifi.ui.com).",
+          "isRequired": true,
+          "isSecret": true
+        },
+        {
+          "name": "UNIFI_API_URL",
+          "description": "UniFi Site Manager API base URL (default: https://api.ui.com).",
+          "default": "https://api.ui.com"
+        },
+        {
+          "name": "UNIFI_API_KEY_OWNER",
+          "description": "Optional label identifying which user/account owns the API key — surfaced in audit logs."
+        },
+        {
+          "name": "UNIFI_TOOLS",
+          "description": "Comma-separated category allowlist. Default: all categories enabled."
+        },
+        {
+          "name": "UNIFI_DISABLE",
+          "description": "Comma-separated category disablelist."
+        }
+      ]
+    }
+  ]
+}

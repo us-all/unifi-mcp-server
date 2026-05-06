@@ -7,9 +7,15 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { startMcpServer } from "@us-all/mcp-toolkit/runtime";
 import { validateConfig, isConnectorAvailable } from "./config.js";
 import { wrapToolHandler } from "./tools/utils.js";
+import { runDoctor } from "./doctor.js";
 
 const pkgPath = join(dirname(fileURLToPath(import.meta.url)), "..", "package.json");
 const { version: pkgVersion } = JSON.parse(readFileSync(pkgPath, "utf-8")) as { version: string };
+
+if (process.argv.includes("--doctor")) {
+  const { exitCode } = await runDoctor();
+  process.exit(exitCode);
+}
 
 // Raw API tools
 import { listHostsSchema, listHosts, getHostSchema, getHost } from "./tools/hosts.js";

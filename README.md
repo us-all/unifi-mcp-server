@@ -10,6 +10,14 @@
 [![@us-all standard](https://img.shields.io/badge/built%20to-%40us--all%20MCP%20standard-blue)](https://github.com/us-all/mcp-toolkit/blob/main/STANDARD.md)
 [![Glama MCP server](https://glama.ai/mcp/servers/us-all/unifi-mcp-server/badges/score.svg)](https://glama.ai/mcp/servers/us-all/unifi-mcp-server)
 
+## Pre-flight diagnostic
+
+```bash
+npx -y @us-all/unifi-mcp --doctor
+```
+
+Validates env vars, pings Site Manager API, probes Cloud Connector (if owner key set), and checks category toggles before starting. Exits non-zero on critical issues so it works in CI / pre-deploy scripts.
+
 ## What it does that others don't
 
 - **Site Manager analytics** — `site-health-timeline`, `summarize-site`, `firmware-inventory`, `compare-sites`, `wan-uptime-trend`, `top-clients-by-bandwidth`, `list-sites-overview`. No other UniFi MCP exposes these.

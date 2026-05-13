@@ -151,96 +151,77 @@ export const listSitesOverviewSchema = z.object({
 });
 
 export async function listSitesOverview() {
-  try {
-    const [sites, devicesData] = await Promise.all([
-      unifiClient.get<{ data: Array<{
-        siteId: string;
-        hostId: string;
-        meta: { desc: string; name: string };
-        statistics: SiteStatistics;
-      }> }>("/sites"),
-      resolveAllDevices(),
-    ]);
+  const [sites, devicesData] = await Promise.all([
+    unifiClient.get<{ data: Array<{
+      siteId: string;
+      hostId: string;
+      meta: { desc: string; name: string };
+      statistics: SiteStatistics;
+    }> }>("/sites"),
+    resolveAllDevices(),
+  ]);
 
-    const hostNames = new Map<string, string>();
-    for (const d of devicesData) {
-      hostNames.set(
-        // match by checking if hostId starts with similar pattern
-        d.hostName,
-        d.hostName,
-      );
-    }
-
-    // Build hostId → hostName map from devices response
-    const hostIdToName = new Map<string, string>();
-    for (const d of devicesData) {
-      hostIdToName.set(d.hostId, d.hostName);
-    }
-
-    // Build hostName → devices map
-    const hostDevices = new Map<string, DeviceEntry[]>();
-    for (const d of devicesData) {
-      hostDevices.set(d.hostName, d.devices);
-    }
-
-    const siteEntries: SiteOverviewEntry[] = [];
-
-    for (const site of sites.data) {
-      const hostName = hostIdToName.get(site.hostId) ?? "unknown";
-      const devices = hostDevices.get(hostName) ?? [];
-      const stats = site.statistics;
-
-      const issues: Issue[] = [];
-
-      // Evaluate each device
-      for (const device of devices) {
-        issues.push(...evaluateDeviceIssues(device, hostName));
-      }
-
-      // Evaluate WAN
-      if (stats.wans) {
-        issues.push(...evaluateWanIssues(stats.wans, hostName));
-      }
-
-      const online = devices.filter((d) => d.status === "online").length;
-      const offline = devices.filter((d) => d.status !== "online").length;
-
-      const wanSummary: Record<string, string> = {};
-      if (stats.wans) {
-        for (const [name, wan] of Object.entries(stats.wans)) {
-          wanSummary[name] = `${wan.wanUptime ?? "?"}%`;
-        }
-      }
-
-      siteEntries.push({
-        name: hostName,
-        status: worstSeverity(issues),
-        summary: summarizeIssues(issues),
-        gateway: stats.gateway?.shortname ?? "unknown",
-        devices: { total: devices.length, online, offline },
-        wan: wanSummary,
-        issues,
-      });
-    }
-
-    const allIssues = siteEntries.flatMap((s) => s.issues);
-
-    return {
-      checkedAt: new Date().toISOString(),
-      totalSites: siteEntries.length,
-      status: worstSeverity(allIssues),
-      summary: summarizeIssues(allIssues),
-      sites: siteEntries,
-    };
-  } catch (error) {
-    return {
-      checkedAt: new Date().toISOString(),
-      totalSites: 0,
-      status: "unknown" as Severity,
-      summary: `Failed to fetch data: ${error instanceof Error ? error.message : String(error)}`,
-      sites: [],
-    };
+  // Build hostId -> hostName map from devices response
+  const hostIdToName = new Map<string, string>();
+  for (const d of devicesData) {
+    hostIdToName.set(d.hostId, d.hostName);
   }
+
+  // Build hostName -> devices map
+  const hostDevices = new Map<string, DeviceEntry[]>();
+  for (const d of devicesData) {
+    hostDevices.set(d.hostName, d.devices);
+  }
+
+  const siteEntries: SiteOverviewEntry[] = [];
+
+  for (const site of sites.data) {
+    const hostName = hostIdToName.get(site.hostId) ?? "unknown";
+    const devices = hostDevices.get(hostName) ?? [];
+    const stats = site.statistics;
+
+    const issues: Issue[] = [];
+
+    // Evaluate each device
+    for (const device of devices) {
+      issues.push(...evaluateDeviceIssues(device, hostName));
+    }
+
+    // Evaluate WAN
+    if (stats.wans) {
+      issues.push(...evaluateWanIssues(stats.wans, hostName));
+    }
+
+    const online = devices.filter((d) => d.status === "online").length;
+    const offline = devices.filter((d) => d.status !== "online").length;
+
+    const wanSummary: Record<string, string> = {};
+    if (stats.wans) {
+      for (const [name, wan] of Object.entries(stats.wans)) {
+        wanSummary[name] = `${wan.wanUptime ?? "?"}%`;
+      }
+    }
+
+    siteEntries.push({
+      name: hostName,
+      status: worstSeverity(issues),
+      summary: summarizeIssues(issues),
+      gateway: stats.gateway?.shortname ?? "unknown",
+      devices: { total: devices.length, online, offline },
+      wan: wanSummary,
+      issues,
+    });
+  }
+
+  const allIssues = siteEntries.flatMap((s) => s.issues);
+
+  return {
+    checkedAt: new Date().toISOString(),
+    totalSites: siteEntries.length,
+    status: worstSeverity(allIssues),
+    summary: summarizeIssues(allIssues),
+    sites: siteEntries,
+  };
 }
 
 // --- Tool: analyze-site-health ---

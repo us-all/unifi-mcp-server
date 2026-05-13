@@ -350,7 +350,7 @@ tool("site-health-timeline",
 currentCategory = "meta";
 
 tool("search-tools",
-  "Discover available tools by natural language query. Returns matching tool names + descriptions across all categories. Use this first to navigate the 51+ tool surface efficiently.",
+  "Discover available tools by natural language query. Returns matching tool names + descriptions across all categories. Use this first to navigate the 54-tool surface efficiently.",
   searchToolsSchema.shape, wrapToolHandler(searchTools));
 
 // === MCP Resources (unifi:// URI scheme) ===
@@ -359,7 +359,7 @@ registerResources(server);
 // === MCP Prompts (workflow templates) ===
 registerPrompts(server);
 
-const toolCount = isConnectorAvailable() ? 45 : 12;
+const toolCount = isConnectorAvailable() ? 54 : 19;
 console.error(`[UniFi] ${toolCount} tools loaded`);
 
 startMcpServer(server).catch((error) => {

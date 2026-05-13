@@ -1,6 +1,8 @@
 import { config } from "./config.js";
 import { withRetry } from "./retry.js";
 
+const REQUEST_TIMEOUT_MS = 30_000;
+
 export class UniFiError extends Error {
   status: number;
   body: unknown;
@@ -55,6 +57,7 @@ class UniFiClient {
         method,
         headers,
         body: options?.body !== undefined ? JSON.stringify(options.body) : undefined,
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
       });
 
       if (!response.ok) {

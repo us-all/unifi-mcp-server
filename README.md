@@ -44,7 +44,7 @@ Connect the server to Claude Desktop or Claude Code, then paste any of these:
 | | sirkirby/unifi-mcp | enuno/unifi-mcp-server | `@us-all/unifi-mcp` (this) |
 |--|---|---|---|
 | GitHub stars | 291 | 117 | — |
-| Tool count | 224 | 74 | **51** |
+| Tool count | 224 | 74 | **54** |
 | Scope | Network + Protect + Access + Drive | Network + multi-site + QoS + backup | Site Manager + Cloud Connector + analytics |
 | Site Manager API | ❌ | partial | ✅ deep + analytics |
 | Cloud Connector | ❌ | partial (3 modes) | ✅ avail/resolved split |
@@ -192,7 +192,7 @@ Workflow templates available via MCP `prompts/list`. Four are fleet-ops; four ar
 
 ## Tools (54)
 
-8 categories. Use `search-tools` to discover at runtime; full list collapsed below. Cloud Connector tools (33) only register when `UNIFI_API_KEY_OWNER` is set; without it the surface is 21 tools.
+8 categories. Use `search-tools` to discover at runtime; full list collapsed below. Cloud Connector tools (33) only register when `UNIFI_API_KEY_OWNER` is set; without it the surface is 19 tools.
 
 | Group | Tools |
 |-------|------:|
@@ -265,7 +265,7 @@ Built on [`@us-all/mcp-toolkit`](https://github.com/us-all/mcp-toolkit):
 
 ## Tech stack
 
-Node.js 18+ • TypeScript strict ESM • pnpm • `@modelcontextprotocol/sdk` • zod v4 • dotenv.
+Node.js 22+ • TypeScript strict ESM • pnpm • `@modelcontextprotocol/sdk` • zod v4 • dotenv.
 
 ## License
 

@@ -1,6 +1,6 @@
 {
   "name": "@us-all/unifi-mcp",
-  "version": "1.12.2",
+  "version": "1.12.3",
   "mcpName": "io.github.us-all/unifi",
   "description": "UniFi semantic analysis MCP server — fleet health, anomaly detection, cross-site analytics on top of Cloud API",
   "type": "module",
@@ -47,7 +47,7 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
-    "@us-all/mcp-toolkit": "^1.2.2",
+    "@us-all/mcp-toolkit": "^1.2.3",
     "dotenv": "^17.4.2",
     "zod": "^4.4.2"
   },

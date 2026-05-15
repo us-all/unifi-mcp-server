@@ -7,7 +7,7 @@ Read-only access via official UniFi Site Manager API and Cloud Connector proxy.
 ## Tech Stack
 - **Runtime**: Node.js 18+ with TypeScript
 - **Package Manager**: pnpm
-- **MCP SDK**: `@modelcontextprotocol/sdk` (^1.27.1)
+- **MCP SDK**: `@modelcontextprotocol/sdk` (^1.29.0)
 - **Validation**: zod v4
 - **Config**: dotenv
 
@@ -126,6 +126,7 @@ API key permissions inherit from the user role of the account that created them.
 - Non-retryable errors (4xx except 429) fail immediately
 
 ### 최근 변경사항
+- **v1.12.2** (2026-05-15): `@us-all/mcp-toolkit` ^1.2.1 → ^1.2.2 dep 핀 + Tech Stack의 MCP SDK 줄 stale drift 정정(^1.27.1 → ^1.29.0, 실제 package.json은 이미 ^1.29.0). 코드 변경 0줄.
 - **v1.12.0** (2026-05-06): `--doctor` CLI flag 추가 — 서버 기동 전에 환경 검증. UNIFI_API_KEY 존재/길이, UNIFI_API_KEY_OWNER 존재(Cloud Connector 활성 여부), UNIFI_API_URL, Site Manager API ping(GET /hosts), Cloud Connector probe(owner key 별도 검증), UNIFI_TOOLS/UNIFI_DISABLE 카테고리 토글 검사. ✅/⚠️/❌/⏭️ 상태 + 결과 요약 + exit code 1(critical) / 0(healthy or warn). `process.argv.includes("--doctor")` 진입점이 `validateConfig()`보다 먼저 동작하므로 API 키 없이도 진단 가능. 8 신규 vitest 케이스(`tests/doctor.test.ts`). 도구 카운트/구조 변경 0.
 - **v1.11.1** (2026-05-06): MCP Server Registry 발행 — `mcpName: "io.github.us-all/unifi"` 추가 + 루트 `server.json` (UNIFI_API_KEY required, UNIFI_API_URL/UNIFI_API_KEY_OWNER optional 메타데이터). 코드 변경 0줄.
 - **v1.11.0** (2026-05-05): MSP-style 워크플로우 Prompt 4개 추가 (`msp-onboard-site-checklist`, `msp-monthly-client-report`, `msp-fleet-firmware-plan`, `msp-bandwidth-complaint-investigation`). 기존 4 fleet-ops prompts 옆에 MSP-specific 4개 추가 (총 8). 모두 read-only. onboard-checklist는 firmware/console/uptime/connector/firewall/reboots/pending 7개 readiness check; monthly-client-report는 non-technical 고객 친화 형식; fleet-firmware-plan은 N-wave staggered rollout(pilot→canary→general) + 롤백 트리거 + 윈도우; bandwidth-complaint은 WAN trend + ISP metrics + top clients + DPI 카테고리 정황 통합 진단. README "What it does" / 비교표 / Prompts 섹션 모두 업데이트.

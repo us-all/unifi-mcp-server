@@ -1,8 +1,8 @@
 {
   "name": "@us-all/unifi-mcp",
-  "version": "1.12.4",
+  "version": "1.12.5",
   "mcpName": "io.github.us-all/unifi",
-  "description": "UniFi semantic analysis MCP server — fleet health, anomaly detection, cross-site analytics on top of Cloud API",
+  "description": "UniFi semantic analysis MCP server \u2014 fleet health, anomaly detection, cross-site analytics on top of Cloud API",
   "type": "module",
   "main": "dist/index.js",
   "bin": {

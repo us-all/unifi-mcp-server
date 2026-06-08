@@ -29,7 +29,8 @@
         },
         {
           "name": "UNIFI_API_KEY_OWNER",
-          "description": "Optional label identifying which user/account owns the API key — surfaced in audit logs."
+          "description": "Owner-role API key — enables 33 Cloud Connector tools for per-device/per-client deep data.",
+          "isSecret": true
         },
         {
           "name": "UNIFI_TOOLS",
@@ -38,6 +39,28 @@
         {
           "name": "UNIFI_DISABLE",
           "description": "Comma-separated category disablelist."
+        },
+        {
+          "name": "UNIFI_LOCAL_URL",
+          "description": "Local controller URL (e.g. https://10.10.1.1). Enables 2 local-only tools (get-port-errors, list-port-flap-summary) that surface per-port errors + SFP DDM the Cloud API does not expose. Requires LAN reachability."
+        },
+        {
+          "name": "UNIFI_LOCAL_USER",
+          "description": "Controller local account username (required when UNIFI_LOCAL_URL set). Viewer/Limited-Admin role is sufficient."
+        },
+        {
+          "name": "UNIFI_LOCAL_PASS",
+          "description": "Controller local account password (required when UNIFI_LOCAL_URL set).",
+          "isSecret": true
+        },
+        {
+          "name": "UNIFI_LOCAL_SITE",
+          "description": "Site slug for legacy /api/s/{site}/* (default: default).",
+          "default": "default"
+        },
+        {
+          "name": "UNIFI_LOCAL_INSECURE",
+          "description": "Set to 'true' to accept self-signed cert from the local controller (typical for UDM Pro)."
         }
       ]
     }

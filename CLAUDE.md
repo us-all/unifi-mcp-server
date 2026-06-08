@@ -22,15 +22,17 @@ node dist/index.js # Start server
 ## Architecture
 ```
 Claude → MCP (stdio) → index.ts
-                        ├── tools/analysis.ts   → Site Manager API (UNIFI_API_KEY)
-                        ├── tools/*.ts (raw)     → Site Manager API (UNIFI_API_KEY)
-                        └── tools/connector.ts   → Cloud Connector  (UNIFI_API_KEY_OWNER)
-                        helpers/resolver.ts      → hostName ↔ ID mapping
+                        ├── tools/analysis.ts    → Site Manager API (UNIFI_API_KEY)
+                        ├── tools/*.ts (raw)      → Site Manager API (UNIFI_API_KEY)
+                        ├── tools/connector.ts    → Cloud Connector  (UNIFI_API_KEY_OWNER)
+                        └── tools/local-ports.ts  → Local Controller (UNIFI_LOCAL_URL + LAN access)
+                        helpers/resolver.ts       → hostName ↔ ID mapping
 ```
 
 ### Layers
 - **Analysis tools** (`tools/analysis.ts`): Semantic tools returning judgments (status/summary/issues)
 - **Connector tools** (`tools/connector.ts`): Cloud Connector proxy to local APIs (requires owner key)
+- **Local tools** (`tools/local-ports.ts`): Direct LAN access to controller legacy `/api/s/{site}/*` for data Integration API does not expose (port errors, SFP DDM, flap counters)
 - **Raw tools** (`tools/hosts.ts`, `sites.ts`, etc.): Direct Site Manager API wrappers
 - **Helpers** (`helpers/resolver.ts`): hostName ↔ hostId/siteId resolution
 
@@ -75,6 +77,10 @@ Each tool file exports:
 - `UNIFI_API_KEY` (required) — API key from unifi.ui.com (any admin)
 - `UNIFI_API_KEY_OWNER` (optional) — Owner account API key for Cloud Connector
 - `UNIFI_API_URL` (optional) — defaults to `https://api.ui.com/v1`
+- `UNIFI_LOCAL_URL` (optional) — local controller URL (e.g. `https://10.10.1.1`), enables port-level tools
+- `UNIFI_LOCAL_USER` / `UNIFI_LOCAL_PASS` (required if URL set) — controller local account (read-only recommended)
+- `UNIFI_LOCAL_SITE` (optional, default `default`) — site slug for legacy `/api/s/{site}/*`
+- `UNIFI_LOCAL_INSECURE` (optional) — `true` to accept self-signed cert (typical for UDM Pro)
 
 ## API Key Permission Levels
 
@@ -126,6 +132,7 @@ API key permissions inherit from the user role of the account that created them.
 - Non-retryable errors (4xx except 429) fail immediately
 
 ### 최근 변경사항
+- **v1.13.0** (2026-06-08): Local Controller 직접 접근 — Cloud API/Cloud Connector가 노출하지 않는 **포트별 에러카운트 + SFP DDM**을 위해 legacy `/proxy/network/api/s/{site}/stat/device/{mac}`를 LAN에서 직접 호출. 신규 `src/local-controller-client.ts` (UniFi OS `/api/auth/login` cookie 인증, 401 자동 재로그인, self-signed cert opt-in via `UNIFI_LOCAL_INSECURE`, undici `Agent` dispatcher). 신규 env: `UNIFI_LOCAL_URL/USER/PASS/SITE/INSECURE` (모두 옵션, 미설정 시 도구 자동 비활성). 신규 도구 2개 (category `local`): `get-port-errors` (port_table 전체 + SFP DDM — rxPowerDbm/txPowerDbm/temperatureC/rxFault/txFault/voltageV/txBiasMa, 그리고 linkDownCount + stpChangeCount + anomalies, `onlyProblems` 필터), `list-port-flap-summary` (fleet-wide 포트 안정성 랭킹 — 모든 스위치 순회 후 `linkDownCount*2 + stpChangeCount + rx/tx errors` 점수로 정렬). 도구 카운트 54→56 (owner key + local both set). Doctor 3-tier probe(Site Manager / Connector / **Local**). `redactionPatterns`에 Cookie/TOKEN/X-CSRF-Token 추가. 의도적 design pivot: 원래 계획했던 `list-port-flap-events`(`EVT_SW_PortFlapping` 이벤트 로그 필터)는 Network 10.4 readonly role에서 `/stat/event` 404 → 더 우수한 신호인 영속 카운터(`link_down_count`)로 대체. 신규 dep: `undici ^8.4.0`. tests +8 → 37 통과.
 - **v1.12.2** (2026-05-15): `@us-all/mcp-toolkit` ^1.2.1 → ^1.2.2 dep 핀 + Tech Stack의 MCP SDK 줄 stale drift 정정(^1.27.1 → ^1.29.0, 실제 package.json은 이미 ^1.29.0). 코드 변경 0줄.
 - **v1.12.0** (2026-05-06): `--doctor` CLI flag 추가 — 서버 기동 전에 환경 검증. UNIFI_API_KEY 존재/길이, UNIFI_API_KEY_OWNER 존재(Cloud Connector 활성 여부), UNIFI_API_URL, Site Manager API ping(GET /hosts), Cloud Connector probe(owner key 별도 검증), UNIFI_TOOLS/UNIFI_DISABLE 카테고리 토글 검사. ✅/⚠️/❌/⏭️ 상태 + 결과 요약 + exit code 1(critical) / 0(healthy or warn). `process.argv.includes("--doctor")` 진입점이 `validateConfig()`보다 먼저 동작하므로 API 키 없이도 진단 가능. 8 신규 vitest 케이스(`tests/doctor.test.ts`). 도구 카운트/구조 변경 0.
 - **v1.11.1** (2026-05-06): MCP Server Registry 발행 — `mcpName: "io.github.us-all/unifi"` 추가 + 루트 `server.json` (UNIFI_API_KEY required, UNIFI_API_URL/UNIFI_API_KEY_OWNER optional 메타데이터). 코드 변경 0줄.

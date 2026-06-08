@@ -29,6 +29,11 @@ interface DoctorEnv {
   UNIFI_API_URL?: string;
   UNIFI_TOOLS?: string;
   UNIFI_DISABLE?: string;
+  UNIFI_LOCAL_URL?: string;
+  UNIFI_LOCAL_USER?: string;
+  UNIFI_LOCAL_PASS?: string;
+  UNIFI_LOCAL_SITE?: string;
+  UNIFI_LOCAL_INSECURE?: string;
 }
 
 interface DoctorOptions {
@@ -67,6 +72,35 @@ async function pingUrl(
   }
 }
 
+async function probeLocalLogin(
+  baseUrl: string,
+  user: string,
+  pass: string,
+  insecure: boolean,
+  _fetchImpl: typeof fetch,
+): Promise<{ status: number; ms: number; error?: string }> {
+  // Lazy import undici so doctor doesn't pull it unless local probe runs.
+  const start = Date.now();
+  try {
+    const { Agent, fetch: undiciFetch } = await import("undici");
+    const dispatcher = insecure ? new Agent({ connect: { rejectUnauthorized: false } }) : undefined;
+    const res = await undiciFetch(`${baseUrl}/api/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({ username: user, password: pass }),
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+      dispatcher,
+    });
+    return { status: res.status, ms: Date.now() - start };
+  } catch (err) {
+    return {
+      status: 0,
+      ms: Date.now() - start,
+      error: err instanceof Error ? err.message : String(err),
+    };
+  }
+}
+
 export async function runDoctor(opts: DoctorOptions = {}): Promise<DoctorResult> {
   const fetchImpl = opts.fetchImpl ?? fetch;
   const env = opts.env ?? (process.env as DoctorEnv);
@@ -77,6 +111,10 @@ export async function runDoctor(opts: DoctorOptions = {}): Promise<DoctorResult>
   const baseUrl = (env.UNIFI_API_URL ?? "https://api.ui.com/v1").replace(/\/+$/, "");
   const toolsEnv = env.UNIFI_TOOLS;
   const disableEnv = env.UNIFI_DISABLE;
+  const localUrl = (env.UNIFI_LOCAL_URL ?? "").replace(/\/+$/, "");
+  const localUser = env.UNIFI_LOCAL_USER ?? "";
+  const localPass = env.UNIFI_LOCAL_PASS ?? "";
+  const localInsecure = ["1", "true", "yes", "on"].includes((env.UNIFI_LOCAL_INSECURE ?? "").toLowerCase());
 
   const checks: Check[] = [];
 
@@ -181,7 +219,49 @@ export async function runDoctor(opts: DoctorOptions = {}): Promise<DoctorResult>
     }
   }
 
-  // 6. Category toggles
+  // 6. Local controller probe (only if local URL/user/pass set)
+  if (!localUrl) {
+    checks.push({
+      name: "Local controller probe",
+      status: "skip",
+      detail: "no UNIFI_LOCAL_URL set — local-only tools (port errors, flap events) will not register",
+    });
+  } else if (!localUser || !localPass) {
+    checks.push({
+      name: "Local controller probe",
+      status: "fail",
+      detail: "UNIFI_LOCAL_URL set but UNIFI_LOCAL_USER or UNIFI_LOCAL_PASS missing",
+    });
+  } else {
+    const result = await probeLocalLogin(localUrl, localUser, localPass, localInsecure, fetchImpl);
+    if (result.status === 200) {
+      checks.push({
+        name: "Local controller probe",
+        status: "ok",
+        detail: `login ok (${result.ms}ms) — port-level tools enabled${localInsecure ? " (insecure TLS allowed)" : ""}`,
+      });
+    } else if (result.status === 400 || result.status === 401 || result.status === 403) {
+      checks.push({
+        name: "Local controller probe",
+        status: "fail",
+        detail: `${result.status} — credentials rejected. Verify UNIFI_LOCAL_USER/PASS.`,
+      });
+    } else if (result.status === 0) {
+      checks.push({
+        name: "Local controller probe",
+        status: "fail",
+        detail: `unreachable (${result.ms}ms): ${result.error ?? "unknown"}${result.error?.includes("self") || result.error?.includes("certificate") ? " — try UNIFI_LOCAL_INSECURE=true for UDM self-signed cert" : ""}`,
+      });
+    } else {
+      checks.push({
+        name: "Local controller probe",
+        status: "warn",
+        detail: `unexpected ${result.status} (${result.ms}ms)`,
+      });
+    }
+  }
+
+  // 7. Category toggles
   if (toolsEnv) {
     checks.push({
       name: "UNIFI_TOOLS",

@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { startMcpServer } from "@us-all/mcp-toolkit/runtime";
-import { validateConfig, isConnectorAvailable } from "./config.js";
+import { validateConfig, isConnectorAvailable, isLocalAvailable } from "./config.js";
 import { wrapToolHandler } from "./tools/utils.js";
 import { runDoctor } from "./doctor.js";
 
@@ -53,6 +53,10 @@ import {
   summarizeSiteSchema, summarizeSite,
   siteHealthTimelineSchema, siteHealthTimeline,
 } from "./tools/aggregations.js";
+import {
+  getPortErrorsSchema, getPortErrors,
+  listPortFlapSummarySchema, listPortFlapSummary,
+} from "./tools/local-ports.js";
 
 validateConfig();
 
@@ -316,6 +320,22 @@ if (isConnectorAvailable()) {
   console.error("[UniFi] Connector tools disabled (no UNIFI_API_KEY_OWNER)");
 }
 
+// === Local Controller Tools (requires UNIFI_LOCAL_URL/USER/PASS, LAN access) ===
+if (isLocalAvailable()) {
+  currentCategory = "local";
+  tool("get-port-errors",
+    "Per-port rx/tx errors, dropped, link state, flap counters (linkDownCount, stpChangeCount, anomalies), and SFP DDM (Rx/Tx Power dBm, temperature, voltage, TX/RX fault) for a switch. Source: legacy /stat/device port_table. Requires LAN-reachable controller.",
+    getPortErrorsSchema.shape, wrapToolHandler(getPortErrors));
+
+  tool("list-port-flap-summary",
+    "Fleet-wide port instability ranking: iterates all switches on the local controller and ranks ports by flap score (linkDownCount*2 + stpChangeCount + rx/tx errors). Surfaces unstable cables/transceivers across the site. Counters reset on switch reboot.",
+    listPortFlapSummarySchema.shape, wrapToolHandler(listPortFlapSummary));
+
+  console.error("[UniFi] Local controller tools enabled (2 tools, LAN access detected)");
+} else {
+  console.error("[UniFi] Local controller tools disabled (no UNIFI_LOCAL_URL/USER/PASS)");
+}
+
 // === Aggregation tools (round-trip elimination) ===
 currentCategory = "analysis";
 
@@ -359,7 +379,8 @@ registerResources(server);
 // === MCP Prompts (workflow templates) ===
 registerPrompts(server);
 
-const toolCount = isConnectorAvailable() ? 54 : 19;
+const baseCount = isConnectorAvailable() ? 54 : 19;
+const toolCount = baseCount + (isLocalAvailable() ? 2 : 0);
 console.error(`[UniFi] ${toolCount} tools loaded`);
 
 startMcpServer(server).catch((error) => {

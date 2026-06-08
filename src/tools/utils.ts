@@ -1,9 +1,10 @@
 import { createWrapToolHandler } from "@us-all/mcp-toolkit";
 import { UniFiError } from "../client.js";
 import { ConnectorError, ConnectorUnavailableError } from "../connector-client.js";
+import { LocalControllerError, LocalControllerUnavailableError } from "../local-controller-client.js";
 
 export const wrapToolHandler = createWrapToolHandler({
-  redactionPatterns: [/X-API-KEY/i],
+  redactionPatterns: [/X-API-KEY/i, /Cookie/i, /TOKEN=[A-Za-z0-9._-]+/i, /X-CSRF-Token/i],
   errorExtractors: [
     {
       match: (error) => error instanceof ConnectorUnavailableError,
@@ -13,9 +14,26 @@ export const wrapToolHandler = createWrapToolHandler({
       }),
     },
     {
+      match: (error) => error instanceof LocalControllerUnavailableError,
+      extract: (error) => ({
+        kind: "passthrough",
+        text: (error as LocalControllerUnavailableError).message,
+      }),
+    },
+    {
       match: (error) => error instanceof ConnectorError,
       extract: (error) => {
         const e = error as ConnectorError;
+        return {
+          kind: "structured",
+          data: { message: e.message, status: e.status, details: e.body },
+        };
+      },
+    },
+    {
+      match: (error) => error instanceof LocalControllerError,
+      extract: (error) => {
+        const e = error as LocalControllerError;
         return {
           kind: "structured",
           data: { message: e.message, status: e.status, details: e.body },

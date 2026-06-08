@@ -10,6 +10,7 @@ export const CATEGORIES = [
   "firewall",
   "wan",
   "reference",
+  "local",
   "meta",
 ] as const;
 
